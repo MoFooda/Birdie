@@ -1,0 +1,153 @@
+-- Sector playbook seed data.
+--
+-- GENERATED FILE — do not edit by hand.
+-- Source: src/core/playbooks.ts · Regenerate: npm run seed:sql
+--
+-- Scoring depends on approved playbooks existing, so run this after the migration:
+--   psql "$DATABASE_URL" -f supabase/seed.sql
+--
+-- Re-running is safe: it updates existing rows in place rather than duplicating them,
+-- and bumps their version so a scored company can be traced to the revision that
+-- produced its sector importance.
+
+insert into sector_playbooks (
+  sector,
+  sub_sector,
+  business_model,
+  website_importance_score,
+  expected_website_role,
+  essential_pages,
+  essential_conversion_actions,
+  essential_trust_signals,
+  common_customer_journey,
+  weak_website_signals,
+  rebuild_conditions,
+  targeted_improvement_conditions,
+  competitor_signals,
+  outreach_angles,
+  version,
+  approval_status
+) values
+  (
+    'Healthcare',
+    'Appointment-driven clinic',
+    'b2c_appointment'::business_model,
+    88,
+    'appointment_booking'::website_role,
+    array['Home', 'About', 'Services', 'Contact']::text[],
+    array['Online booking', 'Click-to-call', 'WhatsApp', 'Contact form']::text[],
+    array['Reviews', 'Testimonials', 'Certifications', 'Contact details']::text[],
+    'A patient searches for a treatment or a nearby clinic on a phone, compares two or three clinics on credentials and reviews, then books the one that makes booking immediate — a call button, a WhatsApp thread or an online slot picker.',
+    array['No way to book without phoning during office hours', 'No practitioner credentials or licence numbers shown', 'Contact details buried below the fold or in an image', 'Service pages that describe procedures but never invite a booking']::text[],
+    array['No mobile layout at all, or a desktop-only site on a mobile-first patient journey', 'No booking or contact path anywhere on the site', 'Information architecture that hides services behind a generic "our clinic" page']::text[],
+    array['The site is sound but booking is missing on service pages', 'Reviews and credentials exist but are not visible on the pages patients land on']::text[],
+    array['Online booking', 'WhatsApp', 'Click-to-call', 'Reviews', 'Practitioner bios']::text[],
+    array['Patients who cannot book in the moment book somewhere else', 'Competitors in the same city let patients book without a phone call', 'Credentials and reviews are the deciding factor and are currently invisible']::text[],
+    1,
+    'approved'::playbook_approval_status
+  ),
+  (
+    'Retail',
+    'E-commerce brand',
+    'b2c_ecommerce'::business_model,
+    96,
+    'ecommerce_transaction'::website_role,
+    array['Home', 'Products', 'About', 'Contact']::text[],
+    array['Checkout', 'Add to cart', 'Pricing', 'Contact form']::text[],
+    array['Reviews', 'Testimonials', 'Contact details', 'Certifications']::text[],
+    'A shopper arrives from search, social or an ad, browses a category, checks price, delivery and returns, reads reviews, and completes the purchase in the same session — almost always on a phone.',
+    array['Products displayed as a catalogue with no way to buy', 'No prices shown', 'No reviews or ratings on product pages', 'Checkout that requires account creation before the cart is visible', 'No analytics or advertising pixel, so no campaign can be measured']::text[],
+    array['The site is a brochure rather than a store: no cart, no checkout', 'The catalogue cannot be browsed on a phone', 'The platform cannot support payment or delivery options the market expects']::text[],
+    array['Checkout works but product pages lack reviews, delivery terms or clear pricing', 'Tracking is missing so paid campaigns cannot be attributed']::text[],
+    array['Checkout', 'Pricing', 'Reviews', 'Delivery terms', 'Meta Pixel', 'GA4']::text[],
+    array['Catalogue without checkout sends buyers to competitors who sell online', 'Competitors show prices and reviews at the point of decision', 'Untracked traffic means ad spend cannot be judged']::text[],
+    1,
+    'approved'::playbook_approval_status
+  ),
+  (
+    'Professional Services',
+    'B2B professional service',
+    'b2b_services'::business_model,
+    74,
+    'lead_generation'::website_role,
+    array['Home', 'Services', 'About', 'Contact']::text[],
+    array['Contact form', 'Quote request', 'Click-to-call']::text[],
+    array['Case studies', 'Client logos', 'Testimonials', 'Certifications', 'Contact details']::text[],
+    'A buyer is referred or finds the firm in search, then uses the website to verify that the firm is real, credible and has handled comparable work, before making contact through a form, a call or email.',
+    array['No description of what the firm actually does, only abstract language', 'No proof of past work: no case studies, clients or named results', 'A single generic contact form as the only path', 'Content that has obviously not been updated in years']::text[],
+    array['Services cannot be understood from the site', 'No credibility evidence exists anywhere on the site', 'The structure forces every visitor through one undifferentiated page']::text[],
+    array['Positioning is clear but proof is thin', 'Service pages exist but do not invite a next step']::text[],
+    array['Case studies', 'Client logos', 'Service landing pages', 'Contact form', 'Team page']::text[],
+    array['Buyers use the site to verify credibility before they call', 'Competitors publish case studies that answer "have you done this before"', 'Service pages that do not ask for a next step lose warm referral traffic']::text[],
+    1,
+    'approved'::playbook_approval_status
+  ),
+  (
+    'Manufacturing',
+    'Building materials manufacturer',
+    'b2b_manufacturing'::business_model,
+    68,
+    'request_for_quotation'::website_role,
+    array['Home', 'Products', 'About', 'Contact']::text[],
+    array['Quote request', 'Contact form', 'WhatsApp', 'Click-to-call']::text[],
+    array['Certifications', 'Case studies', 'Client logos', 'Contact details']::text[],
+    'A contractor, architect or distributor shortlists suppliers by browsing product ranges and finished projects, checks certifications and capacity, then requests a quotation for a specific specification.',
+    array['Product range shown as a few photos with no specifications', 'No quotation path — only a generic email address', 'No finished project references', 'No certifications or capacity information']::text[],
+    array['The product range cannot be browsed at all', 'No quotation or enquiry mechanism exists', 'The site does not work on mobile, where site visits are specified']::text[],
+    array['Products are catalogued but the quote request is missing or hidden', 'Projects exist but are not presented as references']::text[],
+    array['Quote request', 'Product specifications', 'Project gallery', 'Certifications', 'WhatsApp']::text[],
+    array['Specifiers shortlist from the website before they contact anyone', 'Competitors let buyers request a quotation against a specific product', 'Certifications decide tender eligibility and are currently absent']::text[],
+    1,
+    'approved'::playbook_approval_status
+  ),
+  (
+    'Hospitality',
+    'Restaurant and local dining',
+    'b2c_services'::business_model,
+    62,
+    'local_footfall_support'::website_role,
+    array['Home', 'Contact']::text[],
+    array['Click-to-call', 'WhatsApp', 'Online booking']::text[],
+    array['Reviews', 'Contact details']::text[],
+    'A diner discovers the venue on a map or social feed and uses the website mainly to confirm location, opening hours, menu and price level, then calls, books or simply walks in.',
+    array['No menu or an out-of-date menu', 'No opening hours or address', 'Menu published only as a heavy PDF', 'No phone number that can be tapped on a phone']::text[],
+    array['The site gives none of the four things a diner needs: location, hours, menu, contact', 'The site is unusable on a phone']::text[],
+    array['Basics are present but the menu is a PDF or the phone number is not tappable']::text[],
+    array['Menu', 'Click-to-call', 'Reviews', 'Online booking', 'Delivery links']::text[],
+    array['Diners check the menu and hours on a phone minutes before deciding', 'Competitors make the phone number tappable and the menu readable on mobile']::text[],
+    1,
+    'approved'::playbook_approval_status
+  ),
+  (
+    'Technology',
+    'B2B SaaS',
+    'b2b_saas'::business_model,
+    92,
+    'demo_request'::website_role,
+    array['Home', 'Products', 'Pricing', 'About', 'Contact']::text[],
+    array['Demo request', 'Pricing', 'Contact form']::text[],
+    array['Case studies', 'Client logos', 'Testimonials']::text[],
+    'A buyer evaluating tools compares three or four vendors entirely on their websites — what the product does, who else uses it, what it costs — and only speaks to a vendor after the site has qualified it.',
+    array['What the product does cannot be understood in one screen', 'No pricing or pricing guidance of any kind', 'No customer proof', 'No demo or trial path']::text[],
+    array['The product proposition is not communicated at all', 'No conversion path to a demo or trial exists']::text[],
+    array['The proposition is clear but pricing guidance and proof are missing']::text[],
+    array['Demo request', 'Pricing', 'Case studies', 'Product pages', 'Free trial']::text[],
+    array['Buyers shortlist vendors from the website before any sales contact', 'Competitors publish pricing guidance and customer proof']::text[],
+    1,
+    'approved'::playbook_approval_status
+  )
+on conflict (sector, sub_sector, business_model) do update set
+  website_importance_score = excluded.website_importance_score,
+  expected_website_role = excluded.expected_website_role,
+  essential_pages = excluded.essential_pages,
+  essential_conversion_actions = excluded.essential_conversion_actions,
+  essential_trust_signals = excluded.essential_trust_signals,
+  common_customer_journey = excluded.common_customer_journey,
+  weak_website_signals = excluded.weak_website_signals,
+  rebuild_conditions = excluded.rebuild_conditions,
+  targeted_improvement_conditions = excluded.targeted_improvement_conditions,
+  competitor_signals = excluded.competitor_signals,
+  outreach_angles = excluded.outreach_angles,
+  approval_status = excluded.approval_status,
+  version = sector_playbooks.version + 1,
+  updated_at = now();

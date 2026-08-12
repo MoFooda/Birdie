@@ -1,0 +1,58 @@
+{
+  "name": "birdie-opportunity-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Birdie internal AI website opportunity and cold outreach engine",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run test",
+    "trigger:dev": "npx trigger.dev@latest dev",
+    "test:unit": "vitest run --exclude '**/node_modules/**' --exclude tests/e2e.test.ts",
+    "sample:csv": "node --experimental-strip-types scripts/generate-sample-csv.mts",
+    "seed:sql": "node --experimental-strip-types scripts/generate-seed-sql.mts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.10",
+    "@trigger.dev/sdk": "^4.5.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^15.5.23",
+    "openai": "^4.77.0",
+    "papaparse": "^5.4.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
+  },
+  "overrides": {
+    "ws": "^8.21.3",
+    "sharp": "^0.35.3",
+    "nanoid": "^3.3.17",
+    "postcss": "^8.5.23",
+    "cookie": "^0.7.2",
+    "engine.io": "^6.6.7",
+    "@opentelemetry/core": "^2.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/papaparse": "^5.3.15",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.23",
+    "postcss": "^8.5.23",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  }
+}

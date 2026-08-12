@@ -1,0 +1,109 @@
+# Deployment
+
+## Local
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Demo mode is on by default, so this works immediately with no credentials.
+
+## Verifying before you ship
+
+```bash
+npm run verify   # typecheck → lint → build → test
+```
+
+The e2e test boots the production build and drives the workflow over HTTP, which is why
+`verify` builds before it tests.
+
+---
+
+## Supabase
+
+1. Create the project and run the migration:
+   ```bash
+   supabase link --project-ref <ref>
+   supabase db push
+   ```
+2. Seed the sector playbooks — scoring depends on approved playbooks existing:
+   ```bash
+   psql "$DATABASE_URL" -f supabase/seed.sql
+   ```
+3. Auth → Providers: enable email/password (or your preferred provider).
+4. Create your first user in the Supabase dashboard, then insert the matching profile row:
+   ```sql
+   insert into users (id, email, full_name, role)
+   values ('<auth-user-uuid>', 'you@agency.com', 'Your Name', 'admin');
+   ```
+   The `users` row is required — RLS policies and campaign ownership key off it.
+5. Storage: the migration creates a private `website-screenshots` bucket.
+
+---
+
+## Vercel
+
+1. Import the repository. The app is at the repository root, so leave **Root Directory**
+   at its default.
+2. Add the environment variables from `.env.example`. At minimum:
+   ```
+   DEMO_MODE=false
+   NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   SUPABASE_SERVICE_ROLE_KEY=...
+   ```
+3. Deploy.
+
+### Important: use Trigger.dev in serverless
+
+On Vercel, a background promise is not guaranteed to survive the response. The in-process
+runner is designed for a long-running Node server (local, a container, a VM). **In a
+serverless deployment, configure Trigger.dev** — otherwise a batch started from the UI may
+be cut short when the function returns.
+
+The settings page shows which runner is active, and the campaign dashboard says so too.
+
+---
+
+## Trigger.dev
+
+```bash
+npx trigger.dev@latest login
+npx trigger.dev@latest deploy
+```
+
+Set in the Trigger.dev project the same server-side variables the tasks need:
+`SUPABASE_*`, `FIRECRAWL_API_KEY`, `PAGESPEED_API_KEY`, `OPENAI_API_KEY`,
+`SERPER_API_KEY`, `DEMO_MODE=false`.
+
+The tasks import the pipeline from `src/`, so they read exactly the same configuration the
+web app does.
+
+---
+
+## Container / VM deployment
+
+```bash
+npm ci
+npm run build
+NODE_ENV=production npm start
+```
+
+Any long-running Node host works, and there the in-process runner is a genuine option: it
+handles retries, concurrency, idempotency and cancellation. The trade-off is durability —
+a restart mid-batch loses in-flight steps. Completed steps are already recorded, so
+re-running the batch resumes cleanly rather than duplicating work.
+
+---
+
+## Post-deploy checklist
+
+- [ ] `/settings` shows every provider you configured as **live** (not fixture/fallback).
+- [ ] `/settings` shows the data store as **Supabase Postgres**.
+- [ ] `/playbooks` lists the seeded playbooks as **approved** — scoring needs them.
+- [ ] A test campaign with two or three real companies completes end to end.
+- [ ] The CSV export opens in Excel with Arabic rendering correctly (the BOM handles this).
+- [ ] `DEMO_MODE=false` in production — otherwise every report is fixture data.

@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   DESIGN TOKENS — the single source of truth for the app's look.
+   Re-theming (e.g. to a brand palette) means editing only this block.
+   Docs: docs/DESIGN-SYSTEM.md
+
+   Colours are stored as space-separated RGB channels rather than hex so Tailwind's
+   opacity modifiers work against them (`bg-surface/95`, `ring-brand/25`, …). The
+   Tailwind config wraps each one as `rgb(var(--token) / <alpha-value>)`.
+
+   Tajawal is the type family because campaigns run in both English and Arabic and it
+   carries a full Arabic glyph set alongside Latin.
+--------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+:root {
+  --font-sans: 'Tajawal', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Tajawal', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+  --color-bg: 246 248 251;
+  --color-surface: 255 255 255;
+  --color-surface-2: 238 242 247;
+  --color-border: 221 228 237;
+  --color-fg: 22 32 46;
+  --color-muted: 93 107 127;
+
+  --color-brand: 29 78 216;
+  --color-brand-strong: 22 54 168;
+  --color-brand-fg: 255 255 255;
+  --color-brand-soft: 230 237 253;
+
+  --color-accent: 13 148 136;
+  --color-accent-fg: 255 255 255;
+  --color-accent-soft: 217 242 238;
+
+  --color-success: 21 128 61;
+  --color-success-soft: 220 252 231;
+  --color-warning: 180 83 9;
+  --color-warning-soft: 254 243 199;
+  --color-danger: 185 28 28;
+  --color-danger-soft: 254 226 226;
+  --color-info: 3 105 161;
+  --color-info-soft: 224 242 254;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --shadow-pop: 0 8px 28px rgb(16 24 40 / 12%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: 14 20 28;
+    --color-surface: 21 29 40;
+    --color-surface-2: 29 39 53;
+    --color-border: 42 54 70;
+    --color-fg: 232 238 246;
+    --color-muted: 154 169 189;
+
+    --color-brand: 91 139 247;
+    --color-brand-strong: 123 164 255;
+    --color-brand-fg: 11 18 32;
+    --color-brand-soft: 27 41 66;
+
+    --color-accent: 45 212 191;
+    --color-accent-fg: 6 35 31;
+    --color-accent-soft: 18 49 46;
+
+    --color-success: 74 222 128;
+    --color-success-soft: 18 48 31;
+    --color-warning: 251 191 36;
+    --color-warning-soft: 51 38 10;
+    --color-danger: 248 113 113;
+    --color-danger-soft: 58 23 23;
+    --color-info: 56 189 248;
+    --color-info-soft: 16 41 58;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+    --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%);
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-bg: 14 20 28;
+  --color-surface: 21 29 40;
+  --color-surface-2: 29 39 53;
+  --color-border: 42 54 70;
+  --color-fg: 232 238 246;
+  --color-muted: 154 169 189;
+
+  --color-brand: 91 139 247;
+  --color-brand-strong: 123 164 255;
+  --color-brand-fg: 11 18 32;
+  --color-brand-soft: 27 41 66;
+
+  --color-accent: 45 212 191;
+  --color-accent-fg: 6 35 31;
+  --color-accent-soft: 18 49 46;
+
+  --color-success: 74 222 128;
+  --color-success-soft: 18 48 31;
+  --color-warning: 251 191 36;
+  --color-warning-soft: 51 38 10;
+  --color-danger: 248 113 113;
+  --color-danger-soft: 58 23 23;
+  --color-info: 56 189 248;
+  --color-info-soft: 16 41 58;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%);
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--color-border));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-fg));
+    font-family: var(--font-sans);
+    font-feature-settings: 'kern';
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Evidence blocks, URLs and raw provider payloads read better monospaced. */
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border bg-surface shadow-card;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-fg;
+  }
+
+  .hint {
+    @apply text-xs text-muted;
+  }
+
+  .input {
+    @apply w-full rounded border bg-surface px-3 py-2 text-sm text-fg outline-none
+      placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/25;
+  }
+
+  .table-wrap {
+    @apply w-full overflow-x-auto rounded-lg border bg-surface;
+  }
+}
