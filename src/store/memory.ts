@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type {
   AuditRun,
+  UserRecord,
   Campaign,
   CampaignSettings,
   Company,
@@ -36,6 +37,7 @@ import { SEED_PLAYBOOKS } from '@/core/playbooks';
 import type { DataStore, NewCampaign, NewCompany, NewContact, NewPlaybook } from './types';
 
 interface Db {
+  users: UserRecord[];
   campaigns: Campaign[];
   settings: CampaignSettings[];
   companies: Company[];
@@ -58,6 +60,7 @@ const now = () => new Date().toISOString();
 
 function emptyDb(): Db {
   return {
+    users: [],
     campaigns: [],
     settings: [],
     companies: [],
@@ -116,6 +119,12 @@ export class MemoryStore implements DataStore {
   /** Test helper: drop everything and re-seed playbooks. */
   reset(): void {
     this.db = emptyDb();
+    this.flush();
+  }
+
+  async ensureUser(id: string, email: string, fullName: string | null = null): Promise<void> {
+    if (this.db.users.some((u) => u.id === id)) return;
+    this.db.users.push({ id, email, full_name: fullName, role: 'member', created_at: now() });
     this.flush();
   }
 

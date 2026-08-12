@@ -83,7 +83,11 @@ export async function dispatchCampaignRun(
     companyIds: targets.map((c) => c.id),
   });
 
-  if (options.wait) {
+  // On a serverless host a detached promise can be frozen the moment the response is
+  // returned. With fixture providers a whole batch finishes in about a second, so demo
+  // runs are awaited — that makes a hosted demo deterministic instead of a coin flip.
+  // Live batches take minutes and must not block the request; those need Trigger.dev.
+  if (options.wait || env.demoMode) {
     await run;
   } else {
     background(run);

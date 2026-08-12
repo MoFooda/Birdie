@@ -13,6 +13,7 @@ export const POST = withSession(async (ctx) => {
     );
   }
 
+  await ctx.store.ensureUser(ctx.session.userId, ctx.session.email);
   const seeded = await seedDemoCampaign(ctx.store, { ownerId: ctx.session.userId });
   return NextResponse.json(seeded, { status: 201 });
 });

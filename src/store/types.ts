@@ -38,6 +38,13 @@ export type NewPlaybook = Omit<SectorPlaybook, 'id' | 'created_at' | 'updated_at
 export interface DataStore {
   readonly kind: 'memory' | 'supabase';
 
+  /**
+   * Make sure a profile row exists for a signed-in user.
+   * Campaign ownership is a foreign key onto `users`, so this has to succeed before the
+   * first campaign is written — notably for the demo user on a hosted deployment.
+   */
+  ensureUser(id: string, email: string, fullName?: string | null): Promise<void>;
+
   // Campaigns ---------------------------------------------------------------
   listCampaigns(ownerId: string): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | null>;

@@ -30,6 +30,8 @@ export const POST = withSession(async (ctx, request: Request) => {
   }
 
   const { name, ...settings } = parsed.data;
+  // Campaign ownership is a foreign key onto users; make sure the row exists first.
+  await ctx.store.ensureUser(ctx.session.userId, ctx.session.email);
   const campaign = await ctx.store.createCampaign({
     owner_id: ctx.session.userId,
     name,

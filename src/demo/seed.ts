@@ -12,7 +12,8 @@ import { DEMO_COMPANIES } from '@/fixtures/data';
 import { suggestMapping, validateImport } from '@/core/csv-mapping';
 import { importRows } from '@/core/import';
 
-export const DEMO_USER_ID = 'demo-user-0000-0000-0000-000000000001';
+/** A real UUID: with Supabase configured this is inserted into `users`, whose id is a uuid column. */
+export const DEMO_USER_ID = '00000000-0000-4000-8000-000000000001';
 export const DEMO_USER_EMAIL = 'demo@opportunity-engine.local';
 
 export const DEMO_SETTINGS: Omit<CampaignSettings, 'campaign_id' | 'updated_at'> = {

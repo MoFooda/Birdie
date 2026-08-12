@@ -55,12 +55,12 @@ export function connectionStatuses(): ConnectionStatus[] {
       key: 'supabase',
       label: 'Supabase (database, auth, storage)',
       configured: hasSupabase(),
-      mode: hasSupabase() && !demo ? 'live' : 'fixture',
-      detail: hasSupabase()
-        ? hasSupabaseAdmin()
-          ? 'URL, anon key and service-role key present.'
-          : 'URL and anon key present; service-role key missing, so server-side writes fall back to the in-memory store.'
-        : 'Not configured — the app runs on the in-memory demo store.',
+      mode: hasSupabaseAdmin() ? 'live' : 'fixture',
+      detail: hasSupabaseAdmin()
+        ? 'Connected. Data persists here regardless of demo mode — demo mode only changes the providers.'
+        : hasSupabase()
+          ? 'URL and anon key present, but the service-role key is missing, so writes fall back to the in-memory store.'
+          : 'Not configured — running on the in-memory store. Fine locally; on a serverless host state will not survive between requests.',
     },
     {
       key: 'firecrawl',

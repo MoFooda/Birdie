@@ -68,6 +68,7 @@ first) or `npm run test:unit` while iterating.
 
 ## Documentation
 
+- [`docs/GO-LIVE.md`](docs/GO-LIVE.md) — **deploy to Vercel step by step** (and why Lovable cannot host this)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the pieces fit together and why
 - [`docs/SCORING.md`](docs/SCORING.md) — the formula, every component, worked examples
 - [`docs/PROVIDERS.md`](docs/PROVIDERS.md) — getting each API key, and what breaks without it

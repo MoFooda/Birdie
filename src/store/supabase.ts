@@ -57,6 +57,14 @@ export class SupabaseStore implements DataStore {
     return result.data;
   }
 
+  async ensureUser(id: string, email: string, fullName: string | null = null): Promise<void> {
+    const res = await this.table('users').upsert(
+      { id, email, full_name: fullName },
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+    if (res.error) throw new Error(`ensureUser: ${res.error.message}`);
+  }
+
   // -- Campaigns -------------------------------------------------------------
   async listCampaigns(ownerId: string): Promise<Campaign[]> {
     const res = await this.table('campaigns').select('*').eq('owner_id', ownerId).order('created_at', { ascending: false });
