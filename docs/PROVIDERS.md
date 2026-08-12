@@ -125,9 +125,10 @@ Per company, a full run makes roughly:
 - 1 status probe + 1 site crawl (up to 6 pages) + up to 2 screenshots
 - 2 PageSpeed calls (mobile, desktop)
 - 1 search + up to 5 validations + up to 3 competitor probes and crawls
-- 3 model calls
+- up to 8 model calls (1 sector detection, 1 site interpretation, up to 5 competitor
+  validations — one per candidate — and 1 outreach generation)
 
-A 50-company batch is therefore on the order of 150 model calls, 100 PageSpeed calls and
+A 50-company batch is therefore on the order of 400 model calls, 100 PageSpeed calls and
 several hundred page fetches. `PIPELINE_CONCURRENCY` (default 4) caps how many companies
 run at once — raise it carefully, since it multiplies your request rate against every
 provider simultaneously.

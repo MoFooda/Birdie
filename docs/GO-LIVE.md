@@ -142,17 +142,66 @@ values ('<the-auth-user-uuid>', 'you@birdiemena.com', 'Your Name', 'admin');
 
 ---
 
-## Costs
+## What it costs
 
-- **Vercel Hobby** — free, and enough for internal use. Note the 60-second function limit
-  on Hobby; `vercel.json` requests 300s, which applies on Pro. With Trigger.dev handling
-  batches this does not matter.
-- **Supabase free tier** — 500MB database, comfortably enough for tens of thousands of
-  companies.
-- **Providers** — pay per use. Rough per-company cost for a full live run: three model
-  calls, two PageSpeed calls, and roughly ten page fetches. Every call is recorded in the
-  `provider_usage` table with its duration and outcome, so actual spend can be audited
-  rather than estimated.
+Figures below are approximate and were correct as of writing — check each provider's
+current pricing before committing.
+
+### Free, genuinely
+
+- **Running locally.** `npm run dev` in demo mode costs nothing, forever, and exercises
+  the entire product. If you only need it on one machine, stop here.
+- **Google PageSpeed Insights.** Free API, roughly 25,000 requests/day. No card required.
+- **The built-in HTTP scraper.** Used automatically when `FIRECRAWL_API_KEY` is absent.
+  No JavaScript rendering and no screenshots, but no cost either.
+- **Supabase free tier.** 500MB database — tens of thousands of companies. Note that free
+  projects pause after about a week of inactivity; they wake on the next request, but the
+  first one is slow.
+- **Serper free tier.** Around 2,500 searches, one per company, so roughly 2,500 companies
+  before you pay anything.
+
+### The catch worth knowing about
+
+**Vercel's Hobby plan is for non-commercial use only.** An internal tool for an agency is
+commercial use, so hosting this on Vercel means **Pro, about $20/month per member**. That
+is the single largest fixed cost, and it is easy to miss.
+
+If that is unwelcome, the app is an ordinary Node server and runs anywhere:
+
+| Option | Cost | Trade-off |
+| --- | --- | --- |
+| Any small VPS (Hetzner, DigitalOcean) | ~$5/month | You manage it — but the built-in job runner works properly on a long-running server, so **Trigger.dev is not needed at all** |
+| Railway / Render | free tier to ~$5/month | Free tiers sleep when idle |
+| Vercel Pro | ~$20/month/member | Zero maintenance; needs Trigger.dev for large batches |
+
+A $5 VPS is genuinely simpler here than Vercel, because the serverless constraint is the
+only reason Trigger.dev exists in this stack.
+
+### Pay-per-use
+
+- **OpenAI** — no free tier. Per company: up to 8 calls (sector, interpretation, up to
+  five competitor validations, outreach). On a small model this lands in the region of a
+  few US cents per company, so a 50-company batch is typically **under a dollar or two**.
+- **Firecrawl** — the free allowance is a one-off, not monthly, and this app spends about
+  20–25 credits per company (the site, its internal pages, and three competitors). A
+  single 50-company batch is therefore ~1,000 credits: **the free tier will not cover even
+  one batch.** Paid plans start around $16–20/month. Skipping it entirely is a legitimate
+  choice — the built-in scraper takes over, and the settings page will say so.
+- **Trigger.dev** — a free tier exists and is adequate for occasional batches. Only needed
+  on serverless hosting.
+
+### A realistic monthly figure
+
+| Setup | Monthly |
+| --- | --- |
+| Local only, demo mode | **$0** |
+| Local, real analysis, no Firecrawl | **$0 fixed** + a few dollars of OpenAI |
+| $5 VPS, real analysis, no Firecrawl | **~$5** + OpenAI usage |
+| Vercel Pro + Supabase free + Firecrawl | **~$40** + OpenAI usage |
+
+Every provider call is recorded in the `provider_usage` table with its duration, outcome
+and raw payload, so after the first real batch you can measure actual spend instead of
+estimating it.
 
 ---
 
