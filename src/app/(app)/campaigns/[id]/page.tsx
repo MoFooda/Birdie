@@ -46,7 +46,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
 
       {companies.length === 0 ? (
         <EmptyState title="No companies imported yet">
-          <Link className="text-brand underline" href={`/campaigns/${id}/import`}>
+          <Link className="text-brand-strong underline" href={`/campaigns/${id}/import`}>
             Upload an Apollo CSV
           </Link>{' '}
           to get started.

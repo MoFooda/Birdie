@@ -1,18 +1,54 @@
 # Design system
 
-## Status: placeholder palette, single-file swap
+## Source
 
-The intended reference was **birdiemena.com**. That domain is blocked by this
-environment's network egress policy, so its palette and type could not be read, and
-inventing "their" brand colours would have been worse than admitting it.
+The palette and type are taken from **birdie & partners** (birdiemena.com), read from
+screenshots supplied by the team — the site itself is blocked by this environment's
+network policy, so the values below were matched by eye rather than sampled from CSS.
+They are close, not certified: if you have the brand's exact hex values or a brand book,
+put those in and the whole app follows.
 
-What is here instead is a neutral, accessible palette, structured so that dropping in the
-real brand is a **one-file edit**. Nothing else in the codebase hard-codes a colour.
+| Role | Value | Where it comes from |
+| --- | --- | --- |
+| Brand turquoise | `#2BC9C6` | The oversized b mark, hero shapes, CTA buttons |
+| Deep teal (text) | `#0C7A78` | Darkened for links and small text — see the contrast note below |
+| Charcoal | `#3B3A38` | The masthead bar |
+| Near-black ink | `#111414` | Headline type |
+| Near-white ground | `#F7F7F7` | Page background |
 
-To apply the real design system, edit only the token block at the top of
-`src/app/globals.css`.
+### The one deliberate departure
 
----
+Birdie's turquoise is a *fill* colour. At `#2BC9C6` it carries about 2.1:1 against white,
+so using it for body-sized text or links would fail WCAG AA badly. The site itself never
+does this — its CTA buttons are turquoise with **dark** text, not white.
+
+So the tokens split the brand in two, and the app follows the site's own logic:
+
+- `--color-brand` — the true turquoise, used for fills, with `--color-brand-fg` (near-black)
+  on top, exactly as the site's buttons do.
+- `--color-brand-strong` — a darkened teal used wherever the brand colour has to be *text*
+  (links, small labels, score figures). In dark mode this inverts to a lighter teak so it
+  stays legible on the dark ground.
+
+## Typography
+
+**Montserrat** for everything, in the weights the site uses: 700–800 for headings with
+tight tracking, 400–500 for body, and uppercase with wide letter-spacing for nav and
+labels.
+
+Montserrat has no Arabic glyphs, and this product writes Arabic outreach. So the stack is:
+
+```css
+--font-sans: 'Montserrat', 'Tajawal', ui-sans-serif, system-ui, sans-serif;
+```
+
+The browser resolves per glyph: Latin renders in Montserrat, Arabic falls through to
+Tajawal, which is a geometric Arabic face that sits comfortably beside it. Neither
+language gets a broken fallback.
+
+The typeface was identified from the screenshots by its letterforms (double-storey `a`,
+single-storey `g`, geometric round bowls). If the brand actually licenses something else,
+changing the `@import` and the two font tokens is the whole job.
 
 ## How the tokens work
 
@@ -45,7 +81,9 @@ do this, which is why the channel format is used.
 | `--color-border` | All borders and dividers |
 | `--color-fg` | Body text |
 | `--color-muted` | Secondary text, captions |
-| `--color-brand` / `-strong` / `-fg` / `-soft` | Primary actions, score emphasis |
+| `--color-brand` / `-fg` / `-soft` | Turquoise fills, buttons, brand chips |
+| `--color-brand-strong` | The brand colour where it must be readable text |
+| `--color-header` / `-fg` | The charcoal masthead |
 | `--color-accent` / `-fg` / `-soft` | Approve actions, AI-interpretation chips |
 | `--color-success` / `-soft` | Passing checks, live status |
 | `--color-warning` / `-soft` | Needs review, skipped steps |
@@ -58,9 +96,9 @@ Semantic colours carry meaning in this product and should stay distinguishable f
 brand colour: the report leans on `info` for *measured* and `accent` for *AI interpreted*,
 and collapsing those into one hue would undo the distinction the UI exists to make.
 
-### Applying a brand palette
+### Changing the palette
 
-1. Convert each brand hex to RGB channels (`#1D4ED8` → `29 78 216`).
+1. Convert each hex to RGB channels (`#2BC9C6` → `43 201 198`).
 2. Replace the values in the `:root` block.
 3. Replace them again in the two dark blocks (`@media (prefers-color-scheme: dark)` and
    `:root[data-theme='dark']`) — dark values are separate on purpose, since a light brand
@@ -68,17 +106,6 @@ and collapsing those into one hue would undo the distinction the UI exists to ma
 4. Change `--font-sans` / `--font-display` and the `@import` at the top of the file.
 
 No component changes are needed.
-
----
-
-## Typography
-
-**Tajawal**, loaded from Google Fonts. Chosen because campaigns run in both English and
-Arabic and it carries a complete Arabic glyph set alongside Latin — the outreach editor
-renders Arabic bodies with `dir="rtl"`, and a Latin-only face would fall back
-inconsistently mid-interface.
-
-Weights: 400 body, 500 labels, 700 headings, 800 page titles.
 
 ---
 

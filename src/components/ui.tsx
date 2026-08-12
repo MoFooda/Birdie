@@ -21,7 +21,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-brand text-brand-fg hover:bg-brand-strong',
+        primary: 'bg-brand text-brand-fg hover:brightness-95',
         secondary: 'border bg-surface text-fg hover:bg-surface-2',
         ghost: 'text-fg hover:bg-surface-2',
         danger: 'bg-danger text-white hover:opacity-90',
@@ -73,7 +73,7 @@ const badgeVariants = cva('inline-flex items-center gap-1 rounded-sm px-2 py-0.5
   variants: {
     tone: {
       neutral: 'bg-surface-2 text-muted',
-      brand: 'bg-brand-soft text-brand',
+      brand: 'bg-brand-soft text-brand-strong',
       success: 'bg-success-soft text-success',
       warning: 'bg-warning-soft text-warning',
       danger: 'bg-danger-soft text-danger',
@@ -219,7 +219,7 @@ export function ScoreDial({
   caption?: string;
   tone?: 'brand' | 'accent' | 'warning';
 }) {
-  const color = tone === 'accent' ? 'text-accent' : tone === 'warning' ? 'text-warning' : 'text-brand';
+  const color = tone === 'accent' ? 'text-accent' : tone === 'warning' ? 'text-warning' : 'text-brand-strong';
   return (
     <div className="rounded-lg border bg-surface-2/50 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>

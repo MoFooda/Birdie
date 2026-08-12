@@ -24,7 +24,7 @@ export default async function ImportPage({ params }: { params: Promise<{ id: str
           <>
             Upload the export, confirm how the columns map, then review exactly what will and will not be
             imported. Only company name, website and sector are required to run the website analysis.{' '}
-            <Link className="text-brand underline" href={`/campaigns/${id}`}>
+            <Link className="text-brand-strong underline" href={`/campaigns/${id}`}>
               Back to campaign
             </Link>
           </>

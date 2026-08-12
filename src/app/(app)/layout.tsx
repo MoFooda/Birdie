@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { env } from '@/lib/env';
-import { Badge } from '@/components/ui';
 import { SignOutButton } from './sign-out-button';
 
 export const dynamic = 'force-dynamic';
@@ -13,27 +12,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b bg-surface/95 backdrop-blur">
+      {/* Charcoal masthead over a near-white page, echoing birdie & partners' own site. */}
+      <header className="sticky top-0 z-10 bg-header text-header-fg">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 py-3">
-          <Link href="/campaigns" className="font-extrabold tracking-tight">
-            Website Opportunity Engine
+          <Link href="/campaigns" className="text-lg font-extrabold lowercase tracking-tight">
+            birdie<span className="text-brand">.</span>engine
           </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
-            <Link className="rounded px-3 py-1.5 hover:bg-surface-2" href="/campaigns">
+          <nav className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider">
+            <Link className="rounded px-3 py-2 hover:bg-white/10" href="/campaigns">
               Campaigns
             </Link>
-            <Link className="rounded px-3 py-1.5 hover:bg-surface-2" href="/playbooks">
-              Sector playbooks
+            <Link className="rounded px-3 py-2 hover:bg-white/10" href="/playbooks">
+              Playbooks
             </Link>
-            <Link className="rounded px-3 py-1.5 hover:bg-surface-2" href="/settings">
+            <Link className="rounded px-3 py-2 hover:bg-white/10" href="/settings">
               Settings
             </Link>
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            {env.demoMode && <Badge tone="warning">Demo mode — fixture data</Badge>}
-            <span className="hidden text-xs text-muted sm:inline">{session.email}</span>
+            {env.demoMode && (
+              <span className="rounded-sm bg-brand px-2 py-1 text-xs font-semibold text-brand-fg">
+                Demo mode — fixture data
+              </span>
+            )}
+            <span className="hidden text-xs opacity-70 sm:inline">{session.email}</span>
             <SignOutButton />
           </div>
         </div>

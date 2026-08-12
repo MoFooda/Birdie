@@ -23,6 +23,7 @@ const config: Config = {
         border: token('--color-border'),
         fg: token('--color-fg'),
         muted: token('--color-muted'),
+        header: { DEFAULT: token('--color-header'), fg: token('--color-header-fg') },
         brand: {
           DEFAULT: token('--color-brand'),
           fg: token('--color-brand-fg'),

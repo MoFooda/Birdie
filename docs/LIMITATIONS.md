@@ -7,10 +7,11 @@ vague about its own boundaries.
 
 ## Design system
 
-The reference site **birdiemena.com is blocked by this environment's network egress
-policy** and could not be read. The shipped palette is a neutral placeholder, structured
-for a one-file swap — see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md). It is not the Birdie
-brand and is not presented as such.
+The palette and typeface were matched **by eye from screenshots** of birdiemena.com — the
+site is blocked by this environment's network policy, so nothing was sampled from its CSS
+and the typeface was identified from letterforms rather than confirmed. Expect the values
+to be close but not exact. Swapping in the brand's real hex values and font names is a
+single-file edit; see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md).
 
 ---
 

@@ -9,6 +9,7 @@ export function SignOutButton() {
     <Button
       variant="ghost"
       size="sm"
+      className="text-header-fg hover:bg-white/10"
       onClick={async () => {
         await fetch('/api/auth', { method: 'DELETE' });
         router.push('/login');

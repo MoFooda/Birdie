@@ -14,37 +14,42 @@
    Tajawal is the type family because campaigns run in both English and Arabic and it
    carries a full Arabic glyph set alongside Latin.
 --------------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap');
 
 :root {
-  --font-sans: 'Tajawal', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Tajawal', ui-sans-serif, system-ui, sans-serif;
+  /* Montserrat carries the Latin; Tajawal picks up Arabic glyph-by-glyph via fallback. */
+  --font-sans: 'Montserrat', 'Tajawal', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Montserrat', 'Tajawal', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 
-  --color-bg: 246 248 251;
+  --color-bg: 247 247 247;
   --color-surface: 255 255 255;
-  --color-surface-2: 238 242 247;
-  --color-border: 221 228 237;
-  --color-fg: 22 32 46;
-  --color-muted: 93 107 127;
+  --color-surface-2: 238 240 240;
+  --color-border: 222 226 226;
+  --color-fg: 17 20 20;
+  --color-muted: 92 101 101;
 
-  --color-brand: 29 78 216;
-  --color-brand-strong: 22 54 168;
-  --color-brand-fg: 255 255 255;
-  --color-brand-soft: 230 237 253;
+  --color-brand: 43 201 198;
+  --color-brand-strong: 12 122 120;
+  --color-brand-fg: 18 26 26;
+  --color-brand-soft: 218 246 245;
 
-  --color-accent: 13 148 136;
+  --color-accent: 59 58 56;
   --color-accent-fg: 255 255 255;
-  --color-accent-soft: 217 242 238;
+  --color-accent-soft: 232 232 230;
 
-  --color-success: 21 128 61;
-  --color-success-soft: 220 252 231;
-  --color-warning: 180 83 9;
-  --color-warning-soft: 254 243 199;
-  --color-danger: 185 28 28;
-  --color-danger-soft: 254 226 226;
-  --color-info: 3 105 161;
-  --color-info-soft: 224 242 254;
+  --color-success: 21 122 76;
+  --color-success-soft: 216 244 231;
+  --color-warning: 166 92 6;
+  --color-warning-soft: 253 240 214;
+  --color-danger: 186 32 42;
+  --color-danger-soft: 253 226 228;
+  --color-info: 19 106 132;
+  --color-info-soft: 218 240 246;
+
+  /* Birdie's site runs a charcoal masthead above a near-white page. */
+  --color-header: 59 58 56;
+  --color-header-fg: 250 250 249;
 
   --radius-sm: 6px;
   --radius: 10px;
@@ -57,30 +62,33 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg: 14 20 28;
-    --color-surface: 21 29 40;
-    --color-surface-2: 29 39 53;
-    --color-border: 42 54 70;
-    --color-fg: 232 238 246;
-    --color-muted: 154 169 189;
+    --color-bg: 16 20 20;
+    --color-surface: 25 30 30;
+    --color-surface-2: 34 41 41;
+    --color-border: 48 57 57;
+    --color-fg: 232 238 237;
+    --color-muted: 152 166 165;
 
-    --color-brand: 91 139 247;
-    --color-brand-strong: 123 164 255;
-    --color-brand-fg: 11 18 32;
-    --color-brand-soft: 27 41 66;
+    --color-brand: 43 201 198;
+    --color-brand-strong: 94 224 220;
+    --color-brand-fg: 12 20 20;
+    --color-brand-soft: 15 55 54;
 
-    --color-accent: 45 212 191;
-    --color-accent-fg: 6 35 31;
-    --color-accent-soft: 18 49 46;
+    --color-accent: 214 214 210;
+    --color-accent-fg: 23 27 27;
+    --color-accent-soft: 44 49 49;
 
-    --color-success: 74 222 128;
-    --color-success-soft: 18 48 31;
-    --color-warning: 251 191 36;
-    --color-warning-soft: 51 38 10;
-    --color-danger: 248 113 113;
-    --color-danger-soft: 58 23 23;
-    --color-info: 56 189 248;
-    --color-info-soft: 16 41 58;
+    --color-success: 74 210 140;
+    --color-success-soft: 14 48 33;
+    --color-warning: 240 180 60;
+    --color-warning-soft: 50 37 12;
+    --color-danger: 245 122 130;
+    --color-danger-soft: 56 22 25;
+    --color-info: 86 190 220;
+    --color-info-soft: 13 43 53;
+
+    --color-header: 25 30 30;
+    --color-header-fg: 232 238 237;
 
     --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%);
@@ -88,30 +96,33 @@
 }
 
 :root[data-theme='dark'] {
-  --color-bg: 14 20 28;
-  --color-surface: 21 29 40;
-  --color-surface-2: 29 39 53;
-  --color-border: 42 54 70;
-  --color-fg: 232 238 246;
-  --color-muted: 154 169 189;
+  --color-bg: 16 20 20;
+  --color-surface: 25 30 30;
+  --color-surface-2: 34 41 41;
+  --color-border: 48 57 57;
+  --color-fg: 232 238 237;
+  --color-muted: 152 166 165;
 
-  --color-brand: 91 139 247;
-  --color-brand-strong: 123 164 255;
-  --color-brand-fg: 11 18 32;
-  --color-brand-soft: 27 41 66;
+  --color-brand: 43 201 198;
+  --color-brand-strong: 94 224 220;
+  --color-brand-fg: 12 20 20;
+  --color-brand-soft: 15 55 54;
 
-  --color-accent: 45 212 191;
-  --color-accent-fg: 6 35 31;
-  --color-accent-soft: 18 49 46;
+  --color-accent: 214 214 210;
+  --color-accent-fg: 23 27 27;
+  --color-accent-soft: 44 49 49;
 
-  --color-success: 74 222 128;
-  --color-success-soft: 18 48 31;
-  --color-warning: 251 191 36;
-  --color-warning-soft: 51 38 10;
-  --color-danger: 248 113 113;
-  --color-danger-soft: 58 23 23;
-  --color-info: 56 189 248;
-  --color-info-soft: 16 41 58;
+  --color-success: 74 210 140;
+  --color-success-soft: 14 48 33;
+  --color-warning: 240 180 60;
+  --color-warning-soft: 50 37 12;
+  --color-danger: 245 122 130;
+  --color-danger-soft: 56 22 25;
+  --color-info: 86 190 220;
+  --color-info-soft: 13 43 53;
+
+  --color-header: 25 30 30;
+  --color-header-fg: 232 238 237;
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-pop: 0 8px 28px rgb(0 0 0 / 55%);

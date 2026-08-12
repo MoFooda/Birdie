@@ -54,7 +54,7 @@ export default async function CompanyReportPage({
           <>
             {company.normalized_domain ? (
               <a
-                className="font-mono text-brand underline"
+                className="font-mono text-brand-strong underline"
                 href={`https://${company.normalized_domain}`}
                 target="_blank"
                 rel="noreferrer noopener"
@@ -71,7 +71,7 @@ export default async function CompanyReportPage({
               (company size is context only — it is not an input to any score)
             </span>
             <div className="mt-2">
-              <Link className="text-brand underline" href={`/campaigns/${id}/companies`}>
+              <Link className="text-brand-strong underline" href={`/campaigns/${id}/companies`}>
                 Back to results
               </Link>
             </div>
@@ -210,7 +210,7 @@ export default async function CompanyReportPage({
                           <tr key={c.id} className="border-t align-top">
                             <td className="px-3 py-2">
                               <a
-                                className="font-medium text-brand underline"
+                                className="font-medium text-brand-strong underline"
                                 href={c.website}
                                 target="_blank"
                                 rel="noreferrer noopener"
@@ -308,8 +308,8 @@ export default async function CompanyReportPage({
               {score ? (
                 <>
                   <div className="mb-4 rounded-lg border bg-brand-soft p-4 text-center">
-                    <p className="text-xs font-medium uppercase tracking-wide text-brand">Final potential score</p>
-                    <p className="text-5xl font-extrabold tabular-nums text-brand">{score.potential_score}</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-brand-strong">Final potential score</p>
+                    <p className="text-5xl font-extrabold tabular-nums text-brand-strong">{score.potential_score}</p>
                     <p className="mt-1 text-sm font-medium">{CLASSIFICATION_LABELS[score.classification]}</p>
                   </div>
 

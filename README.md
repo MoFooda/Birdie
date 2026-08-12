@@ -72,7 +72,7 @@ first) or `npm run test:unit` while iterating.
 - [`docs/SCORING.md`](docs/SCORING.md) — the formula, every component, worked examples
 - [`docs/PROVIDERS.md`](docs/PROVIDERS.md) — getting each API key, and what breaks without it
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Supabase, Vercel and Trigger.dev setup
-- [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) — the token file and how to re-theme
+- [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) — the Birdie palette, the type stack, and how to re-theme
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — known limitations, honestly
 - [`docs/APOLLO-INTEGRATION.md`](docs/APOLLO-INTEGRATION.md) — notes for future write-back
 

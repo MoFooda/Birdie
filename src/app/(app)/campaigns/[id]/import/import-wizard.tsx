@@ -141,7 +141,7 @@ export function ImportWizard({ campaignId, existingCount }: { campaignId: string
             <input
               type="file"
               accept=".csv,text/csv"
-              className="block w-full text-sm file:mr-4 file:rounded file:border-0 file:bg-brand file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-fg hover:file:bg-brand-strong"
+              className="block w-full text-sm file:mr-4 file:rounded file:border-0 file:bg-brand file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-fg hover:file:brightness-95"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) onFile(file);
