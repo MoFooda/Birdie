@@ -244,6 +244,79 @@ export function auditFindings(audit: TechnicalAudit, playbook: SectorPlaybook | 
     });
   }
 
+  // Accessibility comes free with the PageSpeed call and is a real commercial risk in
+  // several of these markets, not just a nicety.
+  const a11y = audit.pagespeed_mobile?.fetched ? audit.pagespeed_mobile.accessibility_score : null;
+  if (a11y != null && a11y < 70) {
+    add({
+      title: `Accessibility score of ${a11y}/100`,
+      category: 'technical',
+      severity: a11y < 50 ? 'high' : 'medium',
+      page_url: null,
+      evidence: `Lighthouse accessibility audit scored ${a11y}/100 on the homepage.`,
+      measurement_source: 'pagespeed',
+      business_impact:
+        'Visitors using a screen reader, keyboard navigation or larger text hit barriers, and the same faults usually make the page harder for everyone.',
+      recommended_action: 'Fix colour contrast, form labels and focus order first — they carry most of the score.',
+      confidence: 'high',
+      suitable_for_outreach: a11y < 50,
+    });
+  }
+
+  // A site that has not changed in years is a rebuild conversation regardless of how it
+  // scores technically — and the prospect can verify the claim themselves.
+  const archive = audit.archive;
+  if (archive?.fetched && archive.months_since_change != null && archive.months_since_change >= 24) {
+    const years = Math.floor(archive.months_since_change / 12);
+    add({
+      title: `Website has not changed in about ${years} year${years === 1 ? '' : 's'}`,
+      category: 'content',
+      severity: archive.months_since_change >= 60 ? 'high' : 'medium',
+      page_url: null,
+      evidence: `Wayback Machine captures show the homepage content last changed around ${archive.last_content_change?.slice(0, 7) ?? 'an unknown date'}, across ${archive.snapshot_count} archived snapshot(s).`,
+      measurement_source: 'http_check',
+      business_impact:
+        'A site frozen for years signals to visitors that the business may be inactive, and it cannot reflect anything the company has done since.',
+      recommended_action: 'Refresh the homepage message and the proof around it, then keep a light publishing rhythm.',
+      confidence: 'medium',
+      suitable_for_outreach: true,
+    });
+  }
+
+  // The stack itself dates a site, sometimes more visibly than the design does.
+  if (audit.platform.dated_markers.length > 0) {
+    add({
+      title: `Built on a dated front-end stack (${audit.platform.dated_markers.join(', ')})`,
+      category: 'technical',
+      severity: audit.platform.dated_markers.length >= 3 ? 'high' : 'medium',
+      page_url: null,
+      evidence: audit.platform.evidence.join(' | '),
+      measurement_source: 'dom_parse',
+      business_impact:
+        'Libraries of this age stopped receiving security fixes long ago, and they constrain what can be built on top without a rebuild.',
+      recommended_action: 'Rebuild the front end on a current stack rather than patching around these.',
+      confidence: 'high',
+      suitable_for_outreach: true,
+    });
+  }
+
+  // Not a fault — context. A site builder bounds what any rebuild can achieve.
+  if (audit.platform.is_website_builder && audit.platform.platform) {
+    add({
+      title: `Built on ${audit.platform.platform}`,
+      category: 'technical',
+      severity: 'info',
+      page_url: null,
+      evidence: audit.platform.evidence[0] ?? `${audit.platform.platform} fingerprint found in the page source.`,
+      measurement_source: 'dom_parse',
+      business_impact:
+        'A hosted site builder caps how far the site can be taken — worth knowing before scoping any rebuild.',
+      recommended_action: 'Confirm what the current plan allows before proposing structural work.',
+      confidence: 'high',
+      suitable_for_outreach: false,
+    });
+  }
+
   // Playbook-driven conversion gaps: what this specific sector expects and is missing.
   if (playbook) {
     const map: Record<string, keyof TechnicalAudit> = {

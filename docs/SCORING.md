@@ -90,7 +90,16 @@ W = round(100 × Σ(points earned) / Σ(max points of measured items))
 | Basic SEO hygiene | 6 | Page source |
 | Analytics and tracking installed | 4 | Page source |
 | Gap versus competitors | 12 | Page source |
+| Accessibility (Lighthouse) | 4 | PageSpeed |
+| Best practices (Lighthouse) | 3 | PageSpeed |
+| Site has changed recently | 8 | Wayback Machine |
+| Modern front-end stack | 6 | Page source |
 | Structure, journey, conversion path | 14 | AI interpretation |
+
+Freshness scores on a ladder: 8 points at five years without a content change, 6 at three
+years, 4 at two, 2 at one, 0 below that. The dated-stack item adds 3 points per marker
+found (jQuery 1.x, Bootstrap 2/3, Flash, table layouts, `<font>` tags and similar), capped
+at 6.
 
 Sector conversion actions carry the most weight because that is the product's actual
 question: does this website do the job its sector's customer journey requires?

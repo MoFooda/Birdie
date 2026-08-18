@@ -14,6 +14,7 @@ import { createFixtureSearch } from '@/providers/search';
 import { createFixturePageSpeed } from '@/providers/pagespeed';
 import { createFixtureAi } from '@/providers/ai';
 import { createFixtureScreenshot } from '@/providers/screenshot';
+import { createFixtureArchive } from '@/providers/archive';
 import type { Providers } from '@/providers/types';
 import type { CompanyReport } from '@/core/types';
 
@@ -24,6 +25,7 @@ function fixtureProviders(): Providers {
     pagespeed: createFixturePageSpeed(),
     ai: createFixtureAi(),
     screenshot: createFixtureScreenshot(),
+    archive: createFixtureArchive(),
   };
 }
 

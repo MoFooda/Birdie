@@ -313,6 +313,9 @@ async function runPageSpeedAudit(ctx: StepContext): Promise<StepResult> {
   const unavailable = (strategy: 'mobile' | 'desktop', error: string | null): PageSpeedResult => ({
     strategy,
     performance_score: null,
+    accessibility_score: null,
+    seo_score: null,
+    best_practices_score: null,
     lcp_ms: null,
     cls: null,
     tbt_ms: null,
@@ -323,7 +326,13 @@ async function runPageSpeedAudit(ctx: StepContext): Promise<StepResult> {
   const mobile = mobileResult.ok && mobileResult.data ? mobileResult.data : unavailable('mobile', mobileResult.error);
   const desktop = desktopResult.ok && desktopResult.data ? desktopResult.data : unavailable('desktop', desktopResult.error);
 
-  const audit = runTechnicalAudit(site, { mobile, desktop });
+  // How long the site has looked the way it looks now. Free, and one of the strongest
+  // rebuild signals there is — so a failure is recorded rather than allowed to stop the audit.
+  const archiveResult = await ctx.providers.archive.history(company.normalized_domain ?? '');
+  await track(ctx, 'archive_history', archiveResult);
+  const archive = archiveResult.ok && archiveResult.data ? archiveResult.data : null;
+
+  const audit = runTechnicalAudit(site, { mobile, desktop }, archive);
 
   // Findings are written in `calculate-scores`, not here: the playbook-driven conversion
   // gaps need the sector match from step 5, and generating them in one place keeps the

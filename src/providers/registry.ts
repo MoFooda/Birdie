@@ -15,6 +15,7 @@ import { createFixtureSearch, createSerperSearch } from './search';
 import { createFixturePageSpeed, createGooglePageSpeed } from './pagespeed';
 import { createFixtureAi, createOpenAiProvider } from './ai';
 import { createFirecrawlScreenshot, createFixtureScreenshot } from './screenshot';
+import { createFixtureArchive, createWaybackArchive } from './archive';
 
 /** A provider that is intentionally not configured. Reports `not_run`, never fabricates. */
 function unavailable(name: string, reason: string) {
@@ -59,6 +60,7 @@ export function getProviders(): Providers {
       pagespeed: createFixturePageSpeed(),
       ai: createFixtureAi(),
       screenshot: createFixtureScreenshot(),
+      archive: createFixtureArchive(),
     };
     return cached;
   }
@@ -81,6 +83,8 @@ export function getProviders(): Providers {
     screenshot: env.firecrawlApiKey
       ? createFirecrawlScreenshot(env.firecrawlApiKey)
       : disabledScreenshot('FIRECRAWL_API_KEY is not set, so no screenshot was captured.'),
+    // No key, no account, no cost — so it is always on outside demo mode.
+    archive: createWaybackArchive(),
   };
   return cached;
 }

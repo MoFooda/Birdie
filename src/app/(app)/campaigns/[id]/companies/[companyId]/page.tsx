@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { ACTION_LABELS, CLASSIFICATION_LABELS } from '@/core/scoring';
 import { WEBSITE_STATUS_LABELS } from '@/core/website-status';
-import { SIGNAL_LABELS } from '@/core/audit-checks';
+import { SIGNAL_LABELS, type TechnicalAudit } from '@/core/audit-checks';
 import type { CompetitorUsageSummary } from '@/core/competitor-scoring';
 import type { ScoreComponentBreakdown, Severity } from '@/core/types';
 import { ReviewActions } from './review-actions';
@@ -37,6 +37,9 @@ export default async function CompanyReportPage({
 
   const report = await store.getReport(companyId);
   if (!report || report.company.campaign_id !== id) notFound();
+
+  const auditRun = await store.getAuditRun(companyId);
+  const audit = (auditRun?.technical_audit ?? null) as TechnicalAudit | null;
 
   const { company, contacts, status_check, findings, competitors, candidates, score, flow, messages, playbook } =
     report;
@@ -380,6 +383,59 @@ export default async function CompanyReportPage({
                 <Breakdown title="Website transformation need" items={score.transformation_breakdown} />
                 <Breakdown title="Sector website importance" items={score.importance_breakdown} />
                 <Breakdown title="Competitor website usage" items={score.competitor_breakdown} />
+              </CardBody>
+            </Card>
+          )}
+
+          {audit && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Platform and history</CardTitle>
+              </CardHeader>
+              <CardBody className="text-sm">
+                <dl className="space-y-1">
+                  <Row label="Built on" value={audit.platform.platform ?? 'not identified'} />
+                  <Row
+                    label="Site builder"
+                    value={audit.platform.is_website_builder ? 'yes — limits what a rebuild can change' : 'no'}
+                  />
+                  <Row
+                    label="Dated stack"
+                    value={audit.platform.dated_markers.length > 0 ? audit.platform.dated_markers.join(', ') : 'none detected'}
+                  />
+                  <Row
+                    label="Last changed"
+                    value={
+                      audit.archive?.fetched && audit.archive.months_since_change != null
+                        ? `about ${audit.archive.months_since_change} month(s) ago (${audit.archive.last_content_change?.slice(0, 7) ?? '—'})`
+                        : (audit.archive?.error ?? 'not measured')
+                    }
+                  />
+                  <Row
+                    label="First archived"
+                    value={audit.archive?.first_seen ? audit.archive.first_seen.slice(0, 7) : 'not measured'}
+                  />
+                  <Row
+                    label="Accessibility"
+                    value={
+                      audit.pagespeed_mobile?.fetched && audit.pagespeed_mobile.accessibility_score != null
+                        ? `${audit.pagespeed_mobile.accessibility_score}/100`
+                        : 'not measured'
+                    }
+                  />
+                  <Row
+                    label="SEO (Lighthouse)"
+                    value={
+                      audit.pagespeed_mobile?.fetched && audit.pagespeed_mobile.seo_score != null
+                        ? `${audit.pagespeed_mobile.seo_score}/100`
+                        : 'not measured'
+                    }
+                  />
+                </dl>
+                <p className="mt-3 text-xs text-muted">
+                  Platform and stack are read from the page source. &ldquo;Last changed&rdquo; comes from Wayback
+                  Machine capture hashes — archive coverage is uneven, so treat it as indicative.
+                </p>
               </CardBody>
             </Card>
           )}

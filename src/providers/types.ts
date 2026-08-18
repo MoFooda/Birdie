@@ -9,6 +9,7 @@
 
 import type { ScrapedSite, PageSpeedResult } from '@/core/audit-checks';
 import type { StatusProbe } from '@/core/website-status';
+import type { ArchiveProvider } from './archive';
 import type { z } from 'zod';
 
 export interface ProviderMeta {
@@ -74,6 +75,8 @@ export interface Providers {
   pagespeed: PageSpeedProvider;
   ai: AiProvider;
   screenshot: ScreenshotProvider;
+  /** Wayback Machine history — free, no key, and reports its own absence. */
+  archive: ArchiveProvider;
 }
 
 /** Helper so adapters report timing and failure consistently. */

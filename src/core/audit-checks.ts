@@ -36,10 +36,46 @@ export interface ScrapedSite {
 export interface PageSpeedResult {
   strategy: 'mobile' | 'desktop';
   performance_score: number | null;
+  /**
+   * Lighthouse returns accessibility, SEO and best-practices in the same response as
+   * performance, at no extra quota cost. Asking only for performance threw away three
+   * useful measurements on every call we were already paying for.
+   */
+  accessibility_score: number | null;
+  seo_score: number | null;
+  best_practices_score: number | null;
   lcp_ms: number | null;
   cls: number | null;
   tbt_ms: number | null;
   fetched: boolean;
+  error?: string | null;
+}
+
+/**
+ * What the site is built on, and how dated that stack looks.
+ * Read straight from markup we already downloaded, so it costs nothing extra — and it
+ * answers the first question any rebuild conversation runs into: what is this thing?
+ */
+export interface PlatformDetection {
+  /** e.g. 'WordPress', 'Shopify', 'Wix'. Null when nothing identifiable was found. */
+  platform: string | null;
+  /** Site builders that cap what a rebuild can do. */
+  is_website_builder: boolean;
+  /** Markers of a stack that has not been touched in roughly a decade. */
+  dated_markers: string[];
+  evidence: string[];
+}
+
+/** How long the site has looked the way it looks now, via the Wayback Machine. */
+export interface ArchiveHistory {
+  fetched: boolean;
+  first_seen: string | null;
+  last_seen: string | null;
+  /** Last capture whose content hash differed from the one before it. */
+  last_content_change: string | null;
+  /** Whole months since that change, or null when it could not be established. */
+  months_since_change: number | null;
+  snapshot_count: number;
   error?: string | null;
 }
 
@@ -92,6 +128,8 @@ export interface TechnicalAudit {
   failed_pages: string[];
   /** Page types actually crawled, consumed by the essential-pages score item. */
   found_page_types: string[];
+  platform: PlatformDetection;
+  archive: ArchiveHistory | null;
 }
 
 const notMeasured = (reason: NotMeasured, why: string): Detection => ({
@@ -157,9 +195,77 @@ export const IMPORTANT_PAGE_TYPES = [
   'blog',
 ] as const;
 
+/**
+ * Platform fingerprints, ordered most specific first.
+ * `builder` marks hosted site builders — worth flagging separately because they bound
+ * what a rebuild can actually change.
+ */
+const PLATFORM_SIGNATURES: Array<{ name: string; builder: boolean; patterns: RegExp[] }> = [
+  { name: 'Shopify', builder: false, patterns: [/cdn\.shopify\.com/i, /Shopify\.theme/i, /shopify-section/i] },
+  { name: 'Wix', builder: true, patterns: [/static\.parastorage\.com/i, /wix-?(code|bolt|site)/i, /X-Wix-/i] },
+  { name: 'Squarespace', builder: true, patterns: [/static1\.squarespace\.com/i, /squarespace\.com\/universal/i, /Squarespace\.afterBodyLoad/i] },
+  { name: 'Webflow', builder: true, patterns: [/assets(-global)?\.website-files\.com/i, /data-wf-(page|site)/i] },
+  { name: 'GoDaddy Website Builder', builder: true, patterns: [/img1\.wsimg\.com/i, /data-ux=/i] },
+  { name: 'Duda', builder: true, patterns: [/irp-cdn\.multiscreensite\.com/i, /d\.dudacdn\.com/i] },
+  { name: 'WooCommerce', builder: false, patterns: [/woocommerce/i, /wc-ajax/i] },
+  { name: 'WordPress', builder: false, patterns: [/wp-content\//i, /wp-includes\//i, /name=["']generator["'][^>]*WordPress/i] },
+  { name: 'Magento', builder: false, patterns: [/\/static\/version\d+\/frontend\//i, /Magento_/i] },
+  { name: 'OpenCart', builder: false, patterns: [/index\.php\?route=common/i, /catalog\/view\/theme/i] },
+  { name: 'Drupal', builder: false, patterns: [/sites\/all\/(themes|modules)/i, /Drupal\.settings/i] },
+  { name: 'Joomla', builder: false, patterns: [/\/media\/jui\//i, /name=["']generator["'][^>]*Joomla/i] },
+  { name: 'Next.js', builder: false, patterns: [/\/_next\/static\//i, /__NEXT_DATA__/i] },
+  { name: 'React (SPA)', builder: false, patterns: [/data-reactroot/i, /__REACT_DEVTOOLS/i] },
+];
+
+/** Markers of a stack nobody has touched in roughly a decade. */
+const DATED_STACK_MARKERS: Array<{ label: string; pattern: RegExp }> = [
+  { label: 'jQuery 1.x', pattern: /jquery[.\-/]?1\.\d+(\.\d+)?(\.min)?\.js/i },
+  { label: 'Bootstrap 2 or 3', pattern: /bootstrap[.\-/]?[23]\.\d+(\.\d+)?(\.min)?(\.css|\.js)/i },
+  { label: 'Flash embed', pattern: /<(embed|object)[^>]+(shockwave-flash|\.swf)/i },
+  { label: 'Table-based layout', pattern: /<table[^>]*(width=["']100%["'][^>]*)?>[\s\S]{0,400}?<table/i },
+  { label: 'Inline font tag', pattern: /<font\s/i },
+  { label: 'XHTML 1.0 doctype', pattern: /<!DOCTYPE[^>]+XHTML 1\.0/i },
+  { label: 'Frameset', pattern: /<frameset|<iframe[^>]+name=["']main["']/i },
+  { label: 'marquee or blink', pattern: /<(marquee|blink)[\s>]/i },
+];
+
+export function detectPlatform(site: ScrapedSite): PlatformDetection {
+  const html = site.pages.map((p) => p.html).join('\n');
+  const evidence: string[] = [];
+
+  let platform: string | null = null;
+  let isBuilder = false;
+
+  for (const signature of PLATFORM_SIGNATURES) {
+    const matches = findMatches(html, signature.patterns, 1);
+    if (matches.length > 0) {
+      platform = signature.name;
+      isBuilder = signature.builder;
+      evidence.push(`${signature.name}: ${matches[0]}`);
+      break;
+    }
+  }
+
+  const dated: string[] = [];
+  for (const marker of DATED_STACK_MARKERS) {
+    const matches = findMatches(html, [marker.pattern], 1);
+    if (matches.length > 0) {
+      dated.push(marker.label);
+      evidence.push(`${marker.label}: ${matches[0]}`);
+    }
+  }
+
+  if (!platform && dated.length === 0) {
+    evidence.push('no recognisable platform fingerprint in the crawled markup');
+  }
+
+  return { platform, is_website_builder: isBuilder, dated_markers: dated, evidence: evidence.slice(0, 6) };
+}
+
 export function runTechnicalAudit(
   site: ScrapedSite,
   pagespeed: { mobile: PageSpeedResult | null; desktop: PageSpeedResult | null },
+  archive?: ArchiveHistory | null,
 ): TechnicalAudit {
   const home = homepage(site);
 
@@ -204,6 +310,8 @@ export function runTechnicalAudit(
       pagespeed_desktop: pagespeed.desktop,
       failed_pages: [],
       found_page_types: [],
+      platform: { platform: null, is_website_builder: false, dated_markers: [], evidence: ['no page content was retrieved'] },
+      archive: null,
     };
     return blank;
   }
@@ -378,6 +486,8 @@ export function runTechnicalAudit(
     pagespeed_desktop: pagespeed.desktop,
     failed_pages: failedPages.map((p) => p.url),
     found_page_types: [...foundTypes],
+    platform: detectPlatform(site),
+    archive: archive ?? null,
   };
 }
 

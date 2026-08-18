@@ -26,7 +26,7 @@ import type {
   SectorPlaybook,
   WebsiteStatus,
 } from './types';
-import type { TechnicalAudit } from './audit-checks';
+import type { PageSpeedResult, TechnicalAudit } from './audit-checks';
 import { auditSignalMap } from './audit-checks';
 import type { CompetitorUsageSummary } from './competitor-scoring';
 import { isAuditable, isMeasurementBlocked, isMissingWebsite, WEBSITE_STATUS_LABELS } from './website-status';
@@ -481,6 +481,71 @@ function computeTransformationNeed(
           : `Missing: ${hygieneMissing.join(', ')}.`,
     source: 'dom_parse',
   });
+
+  // Accessibility, SEO and best-practices come free with the PageSpeed call.
+  const lighthouseExtras: Array<{ key: string; label: string; weight: number; read: (r: PageSpeedResult) => number | null }> = [
+    { key: 'accessibility', label: 'Accessibility', weight: 4, read: (r) => r.accessibility_score },
+    { key: 'best_practices', label: 'Best practices', weight: 3, read: (r) => r.best_practices_score },
+  ];
+  for (const { key, label, weight, read } of lighthouseExtras) {
+    const score = psMobile?.fetched ? read(psMobile) : null;
+    items.push({
+      key: `lighthouse_${key}`,
+      label: `${label} (Lighthouse)`,
+      max: weight,
+      points: score == null ? null : ((100 - clamp(score)) / 100) * weight,
+      detail:
+        score == null
+          ? `Lighthouse ${label.toLowerCase()} was not measured.`
+          : `Lighthouse ${label.toLowerCase()} score ${score}/100.`,
+      source: 'pagespeed',
+    });
+    if (score != null && score < 60) evidence.push(`Lighthouse ${label.toLowerCase()}: ${score}/100`);
+  }
+
+  // How long the site has looked the way it looks now.
+  const archive = audit.archive;
+  const months = archive?.fetched ? archive.months_since_change : null;
+  items.push({
+    key: 'content_freshness',
+    label: 'Site has changed recently',
+    max: 8,
+    points:
+      months == null
+        ? null
+        : months >= 60
+          ? 8
+          : months >= 36
+            ? 6
+            : months >= 24
+              ? 4
+              : months >= 12
+                ? 2
+                : 0,
+    detail:
+      months == null
+        ? (archive?.error ?? 'Archive history was not fetched.')
+        : `The archived page last changed about ${months} month(s) ago${archive?.last_content_change ? ` (${archive.last_content_change.slice(0, 7)})` : ''}.`,
+    source: 'http_check',
+  });
+  if (months != null && months >= 36) {
+    evidence.push(`Site content has not changed in about ${Math.round(months / 12)} years`);
+  }
+
+  // A dated stack is a rebuild signal in its own right.
+  const dated = audit.platform.dated_markers;
+  items.push({
+    key: 'dated_stack',
+    label: 'Modern front-end stack',
+    max: 6,
+    points: Math.min(6, dated.length * 3),
+    detail:
+      dated.length === 0
+        ? `No dated front-end markers found${audit.platform.platform ? ` (platform: ${audit.platform.platform})` : ''}.`
+        : `Dated markers present: ${dated.join(', ')}.`,
+    source: 'dom_parse',
+  });
+  if (dated.length > 0) evidence.push(`Dated front-end stack: ${dated.join(', ')}`);
 
   // Measurement / tracking
   const trackingPresent = ['ga4', 'gtm', 'meta_pixel', 'other_tracking'].filter((k) => signals[k] === true);

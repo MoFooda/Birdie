@@ -59,9 +59,12 @@ Free tier is roughly 25,000 requests/day but rate-limited per minute; the adapte
 429s with exponential backoff. Each call runs a full Lighthouse pass, so the request
 timeout is 90s.
 
-**Without it:** performance is reported as `fetched: false` with the reason, excluded from
+One call returns four categories — performance, accessibility, SEO and best practices —
+for the same quota cost, and all four are used.
+
+**Without it:** all four are reported as `fetched: false` with the reason, excluded from
 the transformation-need score (both numerator and denominator), and listed as a
-limitation. It is never treated as a failed check.
+limitation. Never treated as failed checks.
 
 ---
 
@@ -101,6 +104,24 @@ hand from the company report.
 
 ---
 
+## Wayback Machine — how long the site has looked like this
+
+No key, no account, no cost. Always on outside demo mode.
+
+The CDX endpoint returns one row per capture including a content digest, so the last
+genuine content change is derivable rather than guessed. A site whose homepage has not
+changed since 2017 is a rebuild conversation regardless of how it scores technically, and
+it is the most checkable line you can put in a cold email — the prospect can verify it
+themselves.
+
+**Limits, recorded rather than papered over:** archive coverage is uneven, a digest changes
+on trivial edits as well as redesigns, and a domain absent from the archive returns
+`fetched: false` rather than "never changed".
+
+**Without it:** freshness is excluded from the score and reported as not measured.
+
+---
+
 ## Trigger.dev — background jobs
 
 1. Create a project at <https://trigger.dev>.
@@ -123,7 +144,8 @@ picks up cleanly.
 Per company, a full run makes roughly:
 
 - 1 status probe + 1 site crawl (up to 6 pages) + up to 2 screenshots
-- 2 PageSpeed calls (mobile, desktop)
+- 2 PageSpeed calls (mobile, desktop), each returning four Lighthouse categories
+- 1 Wayback Machine lookup (free)
 - 1 search + up to 5 validations + up to 3 competitor probes and crawls
 - up to 8 model calls (1 sector detection, 1 site interpretation, up to 5 competitor
   validations — one per candidate — and 1 outreach generation)

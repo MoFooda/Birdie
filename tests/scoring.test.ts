@@ -45,7 +45,7 @@ function auditFor(features: Parameters<typeof buildFixtureSite>[0]['features'], 
     pagespeed_mobile: pagespeed,
   });
   return runTechnicalAudit(built.site!, {
-    mobile: { strategy: 'mobile', performance_score: pagespeed, lcp_ms: 2000, cls: 0.1, tbt_ms: 100, fetched: true },
+    mobile: { strategy: 'mobile', performance_score: pagespeed, accessibility_score: 80, seo_score: 85, best_practices_score: 80, lcp_ms: 2000, cls: 0.1, tbt_ms: 100, fetched: true },
     desktop: null,
   });
 }
@@ -180,7 +180,7 @@ describe('calculateScores', () => {
       baseInput({
         audit: {
           ...auditFor([...features]),
-          pagespeed_mobile: { strategy: 'mobile', performance_score: null, lcp_ms: null, cls: null, tbt_ms: null, fetched: false, error: 'no API key' },
+          pagespeed_mobile: { strategy: 'mobile', performance_score: null, accessibility_score: null, seo_score: null, best_practices_score: null, lcp_ms: null, cls: null, tbt_ms: null, fetched: false, error: 'no API key' },
         },
       }),
     );
