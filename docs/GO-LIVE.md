@@ -152,8 +152,11 @@ current pricing before committing.
 - **Running locally.** `npm run dev` in demo mode costs nothing, forever, and exercises
   the entire product. If you only need it on one machine, stop here.
 - **Google PageSpeed Insights.** Free API, roughly 25,000 requests/day. No card required.
-- **The built-in HTTP scraper.** Used automatically when `FIRECRAWL_API_KEY` is absent.
-  No JavaScript rendering and no screenshots, but no cost either.
+- **Self-hosted Playwright.** `RENDERER=playwright` gives full JavaScript rendering and
+  real screenshots for nothing but memory — everything Firecrawl does for this product,
+  on any server that can run Chromium. Not viable on serverless.
+- **The built-in HTTP scraper.** The fallback when neither is configured. No JavaScript
+  rendering and no screenshots, but no cost either.
 - **Supabase free tier.** 500MB database — tens of thousands of companies. Note that free
   projects pause after about a week of inactivity; they wake on the next request, but the
   first one is slow.
@@ -170,7 +173,7 @@ If that is unwelcome, the app is an ordinary Node server and runs anywhere:
 
 | Option | Cost | Trade-off |
 | --- | --- | --- |
-| Any small VPS (Hetzner, DigitalOcean) | ~$5/month | You manage it — but the built-in job runner works properly on a long-running server, so **Trigger.dev is not needed at all** |
+| Any small VPS (Hetzner, DigitalOcean) | ~$5/month | You manage it — but the built-in job runner works on a long-running server, so **Trigger.dev is not needed**, and Playwright runs there too, so **Firecrawl is not needed either** |
 | Railway / Render | free tier to ~$5/month | Free tiers sleep when idle |
 | Vercel Pro | ~$20/month/member | Zero maintenance; needs Trigger.dev for large batches |
 

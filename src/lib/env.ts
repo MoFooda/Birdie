@@ -22,6 +22,13 @@ export const env = {
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'website-screenshots',
 
   firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? '',
+  /**
+   * Which renderer handles crawling and screenshots.
+   * 'playwright' runs Chromium locally — full JS rendering and real screenshots at no
+   * cost, but it needs a browser binary and roughly 400MB of memory per instance.
+   * 'auto' prefers Firecrawl when a key exists, otherwise the plain HTTP scraper.
+   */
+  renderer: (process.env.RENDERER ?? 'auto') as 'auto' | 'playwright' | 'firecrawl' | 'http',
   pagespeedApiKey: process.env.PAGESPEED_API_KEY ?? '',
   openaiApiKey: process.env.OPENAI_API_KEY ?? '',
   openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
@@ -63,15 +70,17 @@ export function connectionStatuses(): ConnectionStatus[] {
           : 'Not configured — running on the in-memory store. Fine locally; on a serverless host state will not survive between requests.',
     },
     {
-      key: 'firecrawl',
-      label: 'Firecrawl (website scraping)',
-      configured: !!env.firecrawlApiKey,
-      mode: demo ? 'fixture' : env.firecrawlApiKey ? 'live' : 'fallback',
+      key: 'renderer',
+      label: 'Renderer (crawling and screenshots)',
+      configured: env.renderer === 'playwright' || !!env.firecrawlApiKey,
+      mode: demo ? 'fixture' : env.renderer === 'playwright' || env.firecrawlApiKey ? 'live' : 'fallback',
       detail: demo
         ? 'Demo mode: fixture websites are served from local data.'
-        : env.firecrawlApiKey
-          ? 'Firecrawl will be used for crawling and rendering.'
-          : 'No key — falls back to the built-in direct HTTP scraper (no JavaScript rendering).',
+        : env.renderer === 'playwright'
+          ? 'Self-hosted Playwright: full JavaScript rendering and real screenshots, at no per-page cost.'
+          : env.firecrawlApiKey
+            ? 'Firecrawl: JavaScript rendering and screenshots, billed per page.'
+            : 'Built-in HTTP scraper — no JavaScript rendering and no screenshots. Client-rendered sites will look emptier than they are. Set RENDERER=playwright to fix this for free.',
     },
     {
       key: 'pagespeed',

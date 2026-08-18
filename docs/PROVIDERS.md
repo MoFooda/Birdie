@@ -36,6 +36,41 @@ work — state is per-process and disappears when the process does.
 
 ---
 
+## Choosing a renderer
+
+Crawling and screenshots come from one of three, picked by `RENDERER`:
+
+| `RENDERER` | JS rendering | Screenshots | Cost |
+| --- | --- | --- | --- |
+| `playwright` | yes | yes, above-fold and full-page | free, self-hosted |
+| `auto` + `FIRECRAWL_API_KEY` | yes | yes | per page |
+| `auto` with no key | no | no | free |
+
+This matters more than it looks. A React or Vue site serves an almost-empty HTML shell and
+fills it in with script. Read without a browser it appears to have no booking link, no
+phone number and barely any content — and a healthy site scores as broken. The plain
+scraper is fine for server-rendered sites and misleading for the rest.
+
+### Playwright (self-hosted)
+
+```bash
+npm install playwright-core
+npx playwright install --with-deps chromium
+```
+
+Then set `RENDERER=playwright`. Nothing else is needed: no key, no account, no per-page
+charge. Budget roughly 400MB of memory per concurrent browser, so keep
+`PIPELINE_CONCURRENCY` modest on a small VPS.
+
+Screenshots are captured from the same page visit as the crawl, compressed to JPEG data
+URIs (about 60–100KB), and stored inline — small enough to keep in the database and cheap
+enough to send to a vision model.
+
+Does not run well on serverless hosts: the browser binary exceeds typical bundle limits
+and cold starts are slow. On Vercel, use Firecrawl instead.
+
+---
+
 ## Firecrawl — website scraping
 
 1. Sign up at <https://firecrawl.dev>, copy the API key.

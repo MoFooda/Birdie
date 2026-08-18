@@ -16,6 +16,7 @@ import { createFixturePageSpeed, createGooglePageSpeed } from './pagespeed';
 import { createFixtureAi, createOpenAiProvider } from './ai';
 import { createFirecrawlScreenshot, createFixtureScreenshot } from './screenshot';
 import { createFixtureArchive, createWaybackArchive } from './archive';
+import { createPlaywrightScraper, createPlaywrightScreenshot } from './playwright';
 
 /** A provider that is intentionally not configured. Reports `not_run`, never fabricates. */
 function unavailable(name: string, reason: string) {
@@ -65,9 +66,14 @@ export function getProviders(): Providers {
     return cached;
   }
 
-  const scraper: ScraperProvider = env.firecrawlApiKey
-    ? createFirecrawlScraper(env.firecrawlApiKey)
-    : createHttpScraper();
+  // Playwright first when explicitly chosen: it renders JavaScript and captures real
+  // screenshots without a per-page charge, which is what a vision pass needs.
+  const usePlaywright = env.renderer === 'playwright';
+  const scraper: ScraperProvider = usePlaywright
+    ? createPlaywrightScraper()
+    : env.firecrawlApiKey && env.renderer !== 'http'
+      ? createFirecrawlScraper(env.firecrawlApiKey)
+      : createHttpScraper();
 
   cached = {
     scraper,
@@ -80,9 +86,13 @@ export function getProviders(): Providers {
     ai: env.openaiApiKey
       ? createOpenAiProvider(env.openaiApiKey, env.openaiModel)
       : disabledAi('OPENAI_API_KEY is not set, so AI interpretation did not run.'),
-    screenshot: env.firecrawlApiKey
-      ? createFirecrawlScreenshot(env.firecrawlApiKey)
-      : disabledScreenshot('FIRECRAWL_API_KEY is not set, so no screenshot was captured.'),
+    screenshot: usePlaywright
+      ? createPlaywrightScreenshot()
+      : env.firecrawlApiKey
+        ? createFirecrawlScreenshot(env.firecrawlApiKey)
+        : disabledScreenshot(
+            'No renderer for screenshots. Set RENDERER=playwright (free) or FIRECRAWL_API_KEY.',
+          ),
     // No key, no account, no cost — so it is always on outside demo mode.
     archive: createWaybackArchive(),
   };
