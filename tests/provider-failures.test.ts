@@ -16,6 +16,7 @@ import { createFixturePageSpeed } from '@/providers/pagespeed';
 import { createFixtureAi } from '@/providers/ai';
 import { createFixtureScreenshot } from '@/providers/screenshot';
 import { createFixtureArchive } from '@/providers/archive';
+import { createFixtureVision } from '@/providers/vision';
 import { retry } from '@/providers/types';
 import type { AiProvider, PageSpeedProvider, Providers, SearchProvider } from '@/providers/types';
 
@@ -27,6 +28,7 @@ function providers(overrides: Partial<Providers> = {}): Providers {
     ai: createFixtureAi(),
     screenshot: createFixtureScreenshot(),
     archive: createFixtureArchive(),
+    vision: createFixtureVision(),
     ...overrides,
   };
 }

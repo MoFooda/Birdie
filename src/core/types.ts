@@ -103,6 +103,8 @@ export const FINDING_CATEGORIES = [
   'information_architecture',
   'tracking',
   'technical',
+  /** How the page looks and reads on screen, judged from a rendered screenshot. */
+  'visual_design',
 ] as const;
 export type FindingCategory = (typeof FINDING_CATEGORIES)[number];
 
@@ -196,6 +198,9 @@ export const PIPELINE_STEPS = [
   'scrape-company-website',
   'run-pagespeed-audit',
   'detect-sector-and-business-model',
+  // Runs after sector detection because "does this look right?" is only answerable
+  // against what visitors in this sector come to the site to do.
+  'analyze-visual-design',
   'discover-competitors',
   'validate-competitors',
   'analyze-competitor-websites',
@@ -326,6 +331,12 @@ export interface AuditRun {
   ai_assessment: unknown | null;
   /** Rates and gaps behind the competitor component; shape: CompetitorUsageSummary. */
   competitor_summary: unknown | null;
+  /** What the rendered page looks like, judged from screenshots; shape: VisualAssessment. */
+  visual_assessment: unknown | null;
+  /** Why the visual pass could not run, when it could not. Never a substitute verdict. */
+  visual_unavailable_reason: string | null;
+  /** Side-by-side visual verdict against competitors; shape: VisualComparison. */
+  visual_comparison: unknown | null;
 }
 
 export interface WebsiteStatusCheck {
@@ -338,7 +349,10 @@ export interface WebsiteStatusCheck {
   http_status: number | null;
   redirect_chain: string[];
   checked_at: string;
+  /** Mobile, above the fold — the first screen a visitor actually sees. */
   screenshot_url: string | null;
+  /** Full-page capture, only taken when a vision pass will read it. */
+  screenshot_full_page_url: string | null;
   status_reason: string;
   evidence: string[];
   confidence: ConfidenceLevel;
@@ -404,6 +418,8 @@ export interface Competitor {
   usage_score: number;
   /** Presence map for the conversion/communication signals we probe. */
   signals: Record<string, boolean>;
+  /** Above-the-fold capture, so the side-by-side comparison shows what it judged. */
+  screenshot_url: string | null;
   evidence: string[];
   source: 'discovered' | 'manual';
   created_at: string;
@@ -467,6 +483,8 @@ export interface CompanyReport {
   messages: OutreachMessage[];
   jobs: JobRun[];
   playbook: SectorPlaybook | null;
+  /** Carries the technical audit, the AI interpretation and the visual assessment. */
+  audit_run: AuditRun | null;
 }
 
 export interface OutreachFlow {

@@ -115,6 +115,7 @@ describe('freshness in the score', () => {
       audit: auditWith(archive),
       playbook,
       ai: null,
+      visual: null,
       competitors: summarizeCompetitorUsage([], null),
       sector_confidence: 'high',
       min_score_for_outreach: 40,

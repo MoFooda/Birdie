@@ -16,6 +16,7 @@ import { ACTION_LABELS, CLASSIFICATION_LABELS } from '@/core/scoring';
 import { WEBSITE_STATUS_LABELS } from '@/core/website-status';
 import { SIGNAL_LABELS, type TechnicalAudit } from '@/core/audit-checks';
 import type { CompetitorUsageSummary } from '@/core/competitor-scoring';
+import { DESIGN_ERA_LABELS, type VisualAssessment, type VisualComparison } from '@/core/visual-schemas';
 import type { ScoreComponentBreakdown, Severity } from '@/core/types';
 import { ReviewActions } from './review-actions';
 import { OutreachEditor } from './outreach-editor';
@@ -38,8 +39,11 @@ export default async function CompanyReportPage({
   const report = await store.getReport(companyId);
   if (!report || report.company.campaign_id !== id) notFound();
 
-  const auditRun = await store.getAuditRun(companyId);
+  const auditRun = report.audit_run;
   const audit = (auditRun?.technical_audit ?? null) as TechnicalAudit | null;
+  const visual = (auditRun?.visual_assessment ?? null) as VisualAssessment | null;
+  const visualComparison = (auditRun?.visual_comparison ?? null) as VisualComparison | null;
+  const visualUnavailable = auditRun?.visual_unavailable_reason ?? null;
 
   const { company, contacts, status_check, findings, competitors, candidates, score, flow, messages, playbook } =
     report;
@@ -150,6 +154,86 @@ export default async function CompanyReportPage({
 
           <Card>
             <CardHeader>
+              <CardTitle>How the site looks</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="mb-3 text-sm text-muted">
+                Judged from the rendered screenshot, not from the page source. This is the only part of the
+                report that answers what a visitor actually sees — and like everything else drawn from a model,
+                it is opinion you can check against the image beside it.
+              </p>
+
+              {!visual ? (
+                <p className="rounded border border-dashed px-3 py-4 text-sm text-muted">
+                  {visualUnavailable ??
+                    'The site has not been assessed visually. Nothing here should be read as a verdict on how it looks.'}
+                </p>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={visual.design_era === 'current' || visual.design_era === 'recent' ? 'success' : 'warning'}>
+                        {DESIGN_ERA_LABELS[visual.design_era]}
+                      </Badge>
+                      <span className="text-xs text-muted">{visual.design_era_confidence} confidence</span>
+                    </div>
+                    <p className="mt-2 text-sm">{visual.summary}</p>
+
+                    <ul className="mt-3 list-disc pl-5 text-xs text-muted">
+                      {visual.design_era_evidence.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge tone={visual.purpose_clear_above_fold ? 'success' : 'danger'}>
+                        {visual.purpose_clear_above_fold
+                          ? 'Purpose clear on the first screen'
+                          : 'First screen does not say what the business does'}
+                      </Badge>
+                      <Badge tone={visual.primary_action_visible ? 'success' : 'danger'}>
+                        {visual.primary_action_visible
+                          ? `Primary action visible${visual.primary_action_described ? `: ${visual.primary_action_described}` : ''}`
+                          : 'No clear next step without scrolling'}
+                      </Badge>
+                    </div>
+
+                    <dl className="mt-4 space-y-2">
+                      <Dimension label="Visual hierarchy" value={visual.visual_hierarchy} />
+                      <Dimension label="Above-the-fold clarity" value={visual.above_fold_clarity} />
+                      <Dimension label="Imagery quality" value={visual.imagery_quality} />
+                      <Dimension label="Brand consistency" value={visual.brand_consistency} />
+                      <Dimension label="Readability" value={visual.readability} />
+                      <Dimension label="Freedom from clutter" value={visual.visual_clutter} />
+                      <Dimension label="Mobile layout" value={visual.mobile_layout_quality} />
+                    </dl>
+                  </div>
+
+                  <div className="space-y-3">
+                    {status_check?.screenshot_full_page_url ? (
+                      <figure>
+                        <img
+                          src={status_check.screenshot_full_page_url}
+                          alt={`Full-page rendering of ${company.name}'s homepage`}
+                          className="max-h-[32rem] w-full rounded border object-cover object-top"
+                        />
+                        <figcaption className="mt-1 text-xs text-muted">
+                          The full page, as rendered. This is what the assessment above was made from.
+                        </figcaption>
+                      </figure>
+                    ) : (
+                      <p className="text-xs text-muted">
+                        Only the first screen was captured, so the assessment covers that alone.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Measured findings</CardTitle>
             </CardHeader>
             <CardBody>
@@ -190,6 +274,46 @@ export default async function CompanyReportPage({
                   ))}
                 </div>
               ) : null}
+
+              {visualComparison && (
+                <div className="mb-4 rounded border bg-surface-2/60 p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold">Side by side, on looks alone</span>
+                    <Badge
+                      tone={
+                        visualComparison.company_stands_out_as === 'clearly_worse'
+                          ? 'danger'
+                          : visualComparison.company_stands_out_as === 'clearly_better'
+                            ? 'success'
+                            : 'neutral'
+                      }
+                    >
+                      {STANDS_OUT_LABELS[visualComparison.company_stands_out_as]}
+                    </Badge>
+                    <SourceChip source="ai_interpretation" />
+                  </div>
+                  <p className="mt-2 text-sm">{visualComparison.gap_summary}</p>
+                  {visualComparison.visible_differences.length > 0 && (
+                    <ul className="mt-2 list-disc pl-5 text-xs text-muted">
+                      {visualComparison.visible_differences.map((d, i) => (
+                        <li key={i}>{d}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {competitors.some((c) => c.screenshot_url) && (
+                    <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+                      {status_check?.screenshot_url && (
+                        <Thumb label={`${company.name} (this company)`} src={status_check.screenshot_url} />
+                      )}
+                      {competitors
+                        .filter((c) => c.screenshot_url)
+                        .map((c) => (
+                          <Thumb key={c.id} label={c.name} src={c.screenshot_url!} />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {competitors.length === 0 ? (
                 <p className="text-sm text-muted">
@@ -524,6 +648,42 @@ export default async function CompanyReportPage({
         </div>
       </div>
     </>
+  );
+}
+
+const STANDS_OUT_LABELS: Record<VisualComparison['company_stands_out_as'], string> = {
+  clearly_better: 'looks clearly better',
+  comparable: 'looks about the same',
+  clearly_worse: 'looks clearly worse',
+  cannot_tell: 'too close to call from the screenshots',
+};
+
+/** One visual dimension as a labelled bar — low is bad, so the bar reads left to right. */
+function Dimension({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <dt className="text-muted">{label}</dt>
+        <dd className="tabular-nums">{Math.round(value)}/100</dd>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-sm bg-surface-2">
+        <div
+          className={value < 40 ? 'h-full bg-danger' : value < 65 ? 'h-full bg-warning' : 'h-full bg-success'}
+          style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Thumb({ label, src }: { label: string; src: string }) {
+  return (
+    <figure className="w-32 shrink-0">
+      <img src={src} alt={`Homepage of ${label}`} className="h-40 w-32 rounded border object-cover object-top" />
+      <figcaption className="mt-1 truncate text-[0.65rem] text-muted" title={label}>
+        {label}
+      </figcaption>
+    </figure>
   );
 }
 

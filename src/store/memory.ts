@@ -457,6 +457,7 @@ export class MemoryStore implements DataStore {
       messages,
       jobs: await this.listJobRunsForCompany(companyId),
       playbook: company.playbook_id ? await this.getPlaybook(company.playbook_id) : null,
+      audit_run: await this.getAuditRun(companyId),
     };
   }
 

@@ -31,7 +31,7 @@ upload `samples/apollo-sample.csv` → confirm the column mapping → review →
 ### What demo mode actually does
 
 `DEMO_MODE=true` swaps every provider for a fixture adapter and the database for an
-in-memory store. It does **not** swap the pipeline: the same eleven steps, the same
+in-memory store. It does **not** swap the pipeline: the same twelve steps, the same
 detectors, the same scoring engine and the same store interface run as in production.
 
 - Fixture websites are generated as real HTML containing (or deliberately missing) the
@@ -86,19 +86,19 @@ first) or `npm run test:unit` while iterating.
    competitors to analyse, and the minimum score that earns outreach.
 2. **Import an Apollo CSV** — upload, confirm the guessed column mapping, then review a
    row-by-row validation report before anything is written.
-3. **Run the batch** — each company runs eleven steps independently.
+3. **Run the batch** — each company runs twelve steps independently.
 4. **Review** — the company report separates measured facts from AI interpretation, shows
    the full score breakdown, the competitor comparison and the evidence behind every claim.
 5. **Edit and approve** — outreach is editable; a human edit is never overwritten by a
    re-run.
 6. **Export** — one CSV row per company, with the emails intact.
 
-### The eleven pipeline steps
+### The twelve pipeline steps
 
 `validate-company` → `check-website-status` → `scrape-company-website` →
-`run-pagespeed-audit` → `detect-sector-and-business-model` → `discover-competitors` →
-`validate-competitors` → `analyze-competitor-websites` → `calculate-scores` →
-`generate-outreach` → `finalize-company-report`
+`run-pagespeed-audit` → `detect-sector-and-business-model` → `analyze-visual-design` →
+`discover-competitors` → `validate-competitors` → `analyze-competitor-websites` →
+`calculate-scores` → `generate-outreach` → `finalize-company-report`
 
 Each step is idempotent (every write is replace-by-company, keyed on
 `campaign:company:step`), independently retryable from the UI, and reports `skipped` with
@@ -118,7 +118,8 @@ comments. In short:
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side and job writes | Falls back to the in-memory store |
 | `FIRECRAWL_API_KEY` | JS rendering and screenshots | Built-in direct HTTP scraper, no screenshots |
 | `PAGESPEED_API_KEY` | Performance measurement | Performance reported as not measured, excluded from scoring |
-| `OPENAI_API_KEY` | Sector detection, interpretation, outreach | Those steps report "not run"; companies flagged for review |
+| `OPENAI_API_KEY` | Sector detection, interpretation, outreach, visual analysis | Those steps report "not run"; companies flagged for review |
+| `OPENAI_VISION_MODEL` | Which model reads the screenshots | Defaults to `gpt-4.1-mini`; needs a screenshot-capable renderer too |
 | `SERPER_API_KEY` | Competitor discovery | Competitor component unmeasured; the score drops its term |
 | `TRIGGER_SECRET_KEY` / `TRIGGER_PROJECT_REF` | Durable background jobs | In-process runner with the same semantics |
 
@@ -158,7 +159,7 @@ The app is the repository — it lives at the root.
 │   ├── core/          Pure domain logic — no I/O, fully unit tested
 │   ├── providers/     Provider ports plus live and fixture adapters
 │   ├── store/         DataStore port, memory and Supabase implementations
-│   ├── pipeline/      The eleven steps, the runner, and dispatch
+│   ├── pipeline/      The twelve steps, the runner, and dispatch
 │   ├── fixtures/      Demo dataset and the fixture website builder
 │   ├── app/           Next.js App Router pages and API routes
 │   └── components/    UI primitives built on the design tokens

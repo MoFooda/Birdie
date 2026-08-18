@@ -29,6 +29,7 @@ import type {
 import type { PageSpeedResult, TechnicalAudit } from './audit-checks';
 import { auditSignalMap } from './audit-checks';
 import type { CompetitorUsageSummary } from './competitor-scoring';
+import { DESIGN_ERA_LABELS, type DesignEra, type VisualAssessment } from './visual-schemas';
 import { isAuditable, isMeasurementBlocked, isMissingWebsite, WEBSITE_STATUS_LABELS } from './website-status';
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,8 @@ export interface ScoringInput {
   audit: TechnicalAudit | null;
   playbook: SectorPlaybook | null;
   ai: AiWebsiteAssessment | null;
+  /** What the rendered page looks like. Null when no screenshot could be looked at. */
+  visual: VisualAssessment | null;
   competitors: CompetitorUsageSummary | null;
   sector_confidence: ConfidenceLevel | null;
   /** Campaign threshold; outreach is only generated at or above this score. */
@@ -196,7 +199,7 @@ function computeTransformationNeed(
   confidence: ConfidenceLevel;
   primary_reason: string;
 } {
-  const { status, audit, playbook, ai, competitors } = input;
+  const { status, audit, playbook, ai, visual, competitors } = input;
   const label = WEBSITE_STATUS_LABELS[status];
 
   // --- No usable website at all -------------------------------------------------
@@ -627,6 +630,70 @@ function computeTransformationNeed(
     limitations.push('AI interpretation of the site structure was unavailable; the score is based on measured checks only.');
   }
 
+  // How the page actually looks. Markup cannot answer this: a site can carry every tag we
+  // check for and still look like nobody has touched it since 2012.
+  if (visual) {
+    const dims = [
+      visual.visual_hierarchy,
+      visual.above_fold_clarity,
+      visual.imagery_quality,
+      visual.brand_consistency,
+      visual.readability,
+      visual.visual_clutter,
+      visual.mobile_layout_quality,
+    ];
+    const avg = dims.reduce((a, b) => a + b, 0) / dims.length;
+    items.push({
+      key: 'visual_quality',
+      label: 'Visual design and layout (seen in screenshot)',
+      max: 12,
+      points: ((100 - clamp(avg)) / 100) * 12,
+      detail: `Average of seven visual dimensions: ${Math.round(avg)}/100. ${visual.summary}`,
+      source: 'ai_interpretation',
+    });
+    if (avg < 55) evidence.push(visual.summary);
+  } else {
+    items.push({
+      key: 'visual_quality',
+      label: 'Visual design and layout (seen in screenshot)',
+      max: 12,
+      points: null,
+      detail: 'No screenshot was assessed, so how the site looks did not contribute to the score.',
+      source: 'ai_interpretation',
+    });
+    limitations.push(
+      'The site was not looked at visually, so nothing here reflects how it appears on screen — only what its markup contains.',
+    );
+  }
+
+  // Design era is scored separately from visual quality because they answer different
+  // questions: one is "is this well made", the other is "is this from another decade".
+  // A low-confidence or "cannot tell" call is left unmeasured rather than guessed at.
+  const eraPoints: Record<DesignEra, number | null> = {
+    current: 0,
+    recent: 2,
+    dated_2015_2019: 5,
+    dated_2010_2014: 7,
+    pre_2010: 8,
+    cannot_tell: null,
+  };
+  const eraMeasured = visual != null && visual.design_era_confidence !== 'low';
+  items.push({
+    key: 'design_era',
+    label: 'How current the design looks',
+    max: 8,
+    points: eraMeasured ? eraPoints[visual!.design_era] : null,
+    detail: !visual
+      ? 'The design era was not assessed.'
+      : !eraMeasured
+        ? 'The screenshot did not support a confident call on the design era.'
+        : `${DESIGN_ERA_LABELS[visual.design_era]}. Cues: ${visual.design_era_evidence.join('; ')}.`,
+    source: 'ai_interpretation',
+  });
+  if (eraMeasured && ['dated_2010_2014', 'pre_2010', 'dated_2015_2019'].includes(visual!.design_era)) {
+    evidence.push(`Design era: ${DESIGN_ERA_LABELS[visual!.design_era].toLowerCase()}`);
+  }
+
   const { score, breakdown } = normalize(items);
 
   if (score == null) {
@@ -849,6 +916,7 @@ export function calculateScores(input: ScoringInput): ScoringOutput {
     input.sector_confidence,
     s.measured ? 'high' : 'low',
     input.ai?.confidence,
+    input.visual?.confidence,
   );
 
   const recommended = recommendAction(W, input.status, w.measured);

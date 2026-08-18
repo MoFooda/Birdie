@@ -34,7 +34,8 @@ in-memory store, and on a serverless host each request can land in a different i
 so a campaign you just created will seem to vanish.
 
 1. Create a project at [supabase.com](https://supabase.com) (the free tier is enough).
-2. SQL Editor → paste and run `supabase/migrations/0001_init.sql`.
+2. SQL Editor → paste and run `supabase/migrations/0001_init.sql`, then
+   `supabase/migrations/0002_visual_analysis.sql`, in that order.
 3. SQL Editor → paste and run `supabase/seed.sql`.
    **Do not skip this.** Scoring needs approved sector playbooks; without them every
    company falls back to an indeterminate placeholder and gets flagged for review.

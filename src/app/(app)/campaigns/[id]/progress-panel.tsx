@@ -20,6 +20,7 @@ const STEP_SHORT: Record<string, string> = {
   'scrape-company-website': 'Crawl',
   'run-pagespeed-audit': 'Audit',
   'detect-sector-and-business-model': 'Sector',
+  'analyze-visual-design': 'Look',
   'discover-competitors': 'Find',
   'validate-competitors': 'Verify',
   'analyze-competitor-websites': 'Compare',

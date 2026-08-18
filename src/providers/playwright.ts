@@ -195,11 +195,15 @@ export interface CapturedScreenshots {
   full_page: string | null;
 }
 
-async function capturePage(page: Page): Promise<CapturedScreenshots> {
+async function capturePage(
+  page: Page,
+  options: { fullPage?: boolean } = { fullPage: true },
+): Promise<CapturedScreenshots> {
   const aboveFold = await page.screenshot({ type: 'png', fullPage: false }).catch(() => null);
-  const fullPage = await page
-    .screenshot({ type: 'png', fullPage: true, timeout: 20_000 })
-    .catch(() => null);
+  const fullPage =
+    options.fullPage === false
+      ? null
+      : await page.screenshot({ type: 'png', fullPage: true, timeout: 20_000 }).catch(() => null);
 
   return {
     above_fold: aboveFold ? await toDataUri(aboveFold, 900) : null,
@@ -348,14 +352,15 @@ export function createPlaywrightScreenshot(): ScreenshotProvider {
   return {
     name: 'playwright-screenshot',
     live: true,
-    async capture(url, viewport) {
+    async capture(url, viewport, options) {
       return timed('playwright-screenshot', true, async () => {
         return withPage(viewport, async (page) => {
           await settle(page, url);
-          const shots = await capturePage(page);
-          const chosen = viewport === 'desktop' ? (shots.full_page ?? shots.above_fold) : shots.above_fold;
+          // One visit yields both frames, so the full page costs nothing extra.
+          const shots = await capturePage(page, { fullPage: options?.fullPage ?? false });
+          const chosen = shots.above_fold ?? shots.full_page;
           if (!chosen) throw new Error('screenshot could not be captured');
-          return { data: { url: chosen } };
+          return { data: { url: chosen, full_page: shots.full_page } };
         });
       });
     },

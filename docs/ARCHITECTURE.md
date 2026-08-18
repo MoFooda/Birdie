@@ -14,13 +14,14 @@ root with no wrapper directory and no other tooling to accommodate.
              └───────────────┬──────────────────────────┘
                              │
              ┌───────────────▼──────────────────────────┐
-  Pipeline   │ 11 steps · runner · dispatch              │
+  Pipeline   │ 12 steps · runner · dispatch              │
              └───────┬───────────────────────┬──────────┘
                      │                       │
         ┌────────────▼─────────┐   ┌─────────▼───────────┐
   Ports │ DataStore            │   │ Providers            │
         │ memory │ supabase    │   │ scraper/search/      │
-        └──────────────────────┘   │ pagespeed/ai/shot    │
+        └──────────────────────┘   │ pagespeed/ai/shot/   │
+                                   │ archive/vision       │
                                    │ fixture │ live       │
                                    └──────────────────────┘
                      ▲
@@ -66,27 +67,34 @@ would produce claims untethered from anything observed. So:
 
 ## The pipeline
 
-Eleven steps, each a function of `(store, providers, company) → StepResult`:
+Twelve steps, each a function of `(store, providers, company) → StepResult`:
 
 | # | Step | Writes |
 | --- | --- | --- |
 | 1 | `validate-company` | normalised domain, import issues |
-| 2 | `check-website-status` | status check, status findings, screenshot |
+| 2 | `check-website-status` | status check, status findings, screenshots |
 | 3 | `scrape-company-website` | website pages |
 | 4 | `run-pagespeed-audit` | PageSpeed + the technical audit on `audit_runs` |
 | 5 | `detect-sector-and-business-model` | sector, sub-sector, model, playbook match |
-| 6 | `discover-competitors` | competitor candidates |
-| 7 | `validate-competitors` | candidate verdicts |
-| 8 | `analyze-competitor-websites` | competitors with measured signals |
-| 9 | `calculate-scores` | AI interpretation, all findings, score result |
-| 10 | `generate-outreach` | outreach flow and four messages |
-| 11 | `finalize-company-report` | pipeline status, review flags |
+| 6 | `analyze-visual-design` | visual assessment — or why it could not run |
+| 7 | `discover-competitors` | competitor candidates |
+| 8 | `validate-competitors` | candidate verdicts |
+| 9 | `analyze-competitor-websites` | competitors with measured signals, visual comparison |
+| 10 | `calculate-scores` | AI interpretation, all findings, score result |
+| 11 | `generate-outreach` | outreach flow and four messages |
+| 12 | `finalize-company-report` | pipeline status, review flags |
 
-**Why the AI interpretation runs in step 9 rather than step 4:** it needs the playbook
+**Why the AI interpretation runs in step 10 rather than step 4:** it needs the playbook
 matched in step 5 to judge whether the site fulfils the role its sector expects. Findings
 are written in one place for the same reason — generating them in step 4, before the
 playbook is known, made the finding set depend on whether the pipeline had run before.
-That was a real bug the idempotency test caught.
+That was a real bug the idempotency test caught. The visual findings follow the same rule:
+step 6 stores the assessment, step 10 turns it into findings alongside every other one.
+
+**Why the visual pass sits at step 6:** "does this look right?" is only answerable against
+what visitors in this sector come to the site to do, which step 5 establishes. It runs
+before the competitor steps so the comparison in step 9 has the company's own capture to
+put next to theirs.
 
 ### Idempotency
 
@@ -117,7 +125,7 @@ the work continues in the background. (`{ wait: true }` is available for tests a
 
 ## Data model
 
-Eighteen tables (`supabase/migrations/0001_init.sql`). Points worth noting:
+Eighteen tables (`supabase/migrations/`, applied in filename order). Points worth noting:
 
 - Raw provider payloads live in `provider_usage.raw_response`, apart from normalised
   business data, so an upstream format change cannot corrupt analysis.

@@ -362,7 +362,7 @@ export class SupabaseStore implements DataStore {
   async getReport(companyId: string): Promise<CompanyReport | null> {
     const company = await this.getCompany(companyId);
     if (!company) return null;
-    const [contacts, status_check, pages, findings, candidates, competitors, score, outreach, jobs] =
+    const [contacts, status_check, pages, findings, candidates, competitors, score, outreach, jobs, audit_run] =
       await Promise.all([
         this.listContacts(companyId),
         this.getStatusCheck(companyId),
@@ -373,6 +373,7 @@ export class SupabaseStore implements DataStore {
         this.getScore(companyId),
         this.getOutreach(companyId),
         this.listJobRunsForCompany(companyId),
+        this.getAuditRun(companyId),
       ]);
     return {
       company,
@@ -387,6 +388,7 @@ export class SupabaseStore implements DataStore {
       messages: outreach.messages,
       jobs,
       playbook: company.playbook_id ? await this.getPlaybook(company.playbook_id) : null,
+      audit_run,
     };
   }
 

@@ -10,6 +10,7 @@
 import type { ScrapedSite, PageSpeedResult } from '@/core/audit-checks';
 import type { StatusProbe } from '@/core/website-status';
 import type { ArchiveProvider } from './archive';
+import type { VisionProvider } from './vision';
 import type { z } from 'zod';
 
 export interface ProviderMeta {
@@ -65,8 +66,23 @@ export interface AiProvider extends ProviderMeta {
   generate<T>(request: AiRequest<T>): Promise<ProviderResult<T>>;
 }
 
+export interface CapturedShot {
+  /** What fits on the first screen — the only part most visitors ever see. */
+  url: string;
+  /**
+   * The whole page in one image, captured in the *same* visit rather than a second one,
+   * so asking for it costs one page load and one Firecrawl credit rather than two.
+   * Null unless `fullPage` was requested, or when the capture of it failed.
+   */
+  full_page: string | null;
+}
+
 export interface ScreenshotProvider extends ProviderMeta {
-  capture(url: string, viewport: 'mobile' | 'desktop'): Promise<ProviderResult<{ url: string }>>;
+  capture(
+    url: string,
+    viewport: 'mobile' | 'desktop',
+    options?: { fullPage?: boolean },
+  ): Promise<ProviderResult<CapturedShot>>;
 }
 
 export interface Providers {
@@ -77,7 +93,11 @@ export interface Providers {
   screenshot: ScreenshotProvider;
   /** Wayback Machine history — free, no key, and reports its own absence. */
   archive: ArchiveProvider;
+  /** Looks at the rendered page as a picture. Reports `not_run` when it has no image. */
+  vision: VisionProvider;
 }
+
+export type { VisionProvider } from './vision';
 
 /** Helper so adapters report timing and failure consistently. */
 export async function timed<T>(

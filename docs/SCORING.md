@@ -95,6 +95,8 @@ W = round(100 × Σ(points earned) / Σ(max points of measured items))
 | Site has changed recently | 8 | Wayback Machine |
 | Modern front-end stack | 6 | Page source |
 | Structure, journey, conversion path | 14 | AI interpretation |
+| Visual design and layout | 12 | AI interpretation of a screenshot |
+| How current the design looks | 8 | AI interpretation of a screenshot |
 
 Freshness scores on a ladder: 8 points at five years without a content change, 6 at three
 years, 4 at two, 2 at one, 0 below that. The dated-stack item adds 3 points per marker
@@ -103,6 +105,37 @@ at 6.
 
 Sector conversion actions carry the most weight because that is the product's actual
 question: does this website do the job its sector's customer journey requires?
+
+### The two visual items
+
+Everything above them is read from markup, which cannot answer the question a prospect
+asks first: *does this look like a business I would buy from?* A site can carry every tag
+the audit checks for and still look untouched since 2012.
+
+**Visual design and layout** averages seven dimensions the model scores from the rendered
+screenshot — hierarchy, above-the-fold clarity, imagery, brand consistency, readability,
+freedom from clutter, and mobile layout — and converts the average to need the same way
+the structural item does: `((100 − average) / 100) × 12`.
+
+**How current the design looks** maps the design era onto points:
+
+| Era | Points |
+| --- | --- |
+| Looks current | 0 |
+| Recent, a little behind | 2 |
+| Dated — late 2010s | 5 |
+| Dated — early 2010s | 7 |
+| Pre-2010 | 8 |
+| Cannot tell from the screenshot | *not measured* |
+
+The era is always a **range with a confidence**, never a year. "This looks like it was
+built around 2012–2015" is defensible; "your website is from 2013" is not. A `cannot_tell`
+answer, or any era call the model returned at low confidence, is left unmeasured rather
+than guessed at — the same rule as every other item.
+
+Both items are excluded entirely when no screenshot was looked at, and the score's
+limitations say so explicitly, so nobody reads a markup-only score as a verdict on how
+the site appears.
 
 ### Unmeasured items are excluded, not failed
 

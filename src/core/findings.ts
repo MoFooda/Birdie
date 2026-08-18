@@ -9,6 +9,7 @@
 
 import type { TechnicalAudit } from './audit-checks';
 import type { SectorPlaybook, WebsiteFinding, WebsiteStatus } from './types';
+import { DESIGN_ERA_LABELS, type VisualAssessment, type VisualComparison } from './visual-schemas';
 import { WEBSITE_STATUS_LABELS, isMeasurementBlocked, isMissingWebsite } from './website-status';
 
 export type NewFinding = Omit<WebsiteFinding, 'id' | 'company_id'>;
@@ -354,4 +355,120 @@ export function auditFindings(audit: TechnicalAudit, playbook: SectorPlaybook | 
   }
 
   return out;
+}
+
+/**
+ * Findings from the visual pass.
+ *
+ * Every one of these is an opinion about a picture, so they all carry
+ * `measurement_source: 'ai_interpretation'` and the evidence text says what was seen on
+ * screen. The report keeps them in the interpretation column, next to the screenshot they
+ * were drawn from, so a reviewer can disagree by looking.
+ */
+export function visualFindings(assessment: VisualAssessment): NewFinding[] {
+  const out: NewFinding[] = [];
+  const add = (f: Omit<NewFinding, 'created_at'>) => out.push({ ...f, created_at: nowIso() });
+
+  for (const f of assessment.findings) {
+    add({
+      title: f.title,
+      category: 'visual_design',
+      severity: f.severity,
+      page_url: null,
+      evidence: `Seen in the rendered screenshot: ${f.observed}`,
+      measurement_source: 'ai_interpretation',
+      business_impact: f.business_impact,
+      recommended_action: f.recommended_action,
+      confidence: assessment.confidence,
+      suitable_for_outreach: f.suitable_for_outreach,
+    });
+  }
+
+  // A dated look is the single most quotable thing in this whole pass, and the only one
+  // the prospect can verify in two seconds — but only when the model was willing to call
+  // it, and only as a range.
+  const dated = ['dated_2015_2019', 'dated_2010_2014', 'pre_2010'].includes(assessment.design_era);
+  if (dated && assessment.design_era_confidence !== 'low') {
+    add({
+      title: `The design looks dated — ${DESIGN_ERA_LABELS[assessment.design_era].toLowerCase()}`,
+      category: 'visual_design',
+      severity: assessment.design_era === 'pre_2010' ? 'high' : 'medium',
+      page_url: null,
+      evidence: `Visual cues in the screenshot: ${assessment.design_era_evidence.join('; ')}.`,
+      measurement_source: 'ai_interpretation',
+      business_impact:
+        'A visitor forms a view of the business in the first seconds, and a site that looks a decade old reads as a business that has stopped investing.',
+      recommended_action:
+        'Rebuild the front end on a current visual system rather than restyling the existing one piece by piece.',
+      confidence: assessment.design_era_confidence,
+      suitable_for_outreach: true,
+    });
+  }
+
+  if (!assessment.purpose_clear_above_fold) {
+    add({
+      title: 'The first screen does not say what the business does',
+      category: 'visual_design',
+      severity: 'high',
+      page_url: null,
+      evidence: `Above the fold, nothing states the offer plainly. ${assessment.summary}`,
+      measurement_source: 'ai_interpretation',
+      business_impact:
+        'Visitors arriving from search or an ad decide whether to stay before they scroll; if the first screen does not answer "what is this", most leave.',
+      recommended_action: 'Put a plain one-line statement of the offer, and who it is for, at the top of the homepage.',
+      confidence: assessment.confidence,
+      suitable_for_outreach: true,
+    });
+  }
+
+  if (!assessment.primary_action_visible) {
+    add({
+      title: 'No clear next step on the first screen',
+      category: 'visual_design',
+      severity: 'high',
+      page_url: null,
+      evidence: 'No primary call to action is visible in the above-the-fold screenshot.',
+      measurement_source: 'ai_interpretation',
+      business_impact:
+        'A visitor who is ready to act has to hunt for how, and a proportion of them simply will not.',
+      recommended_action: 'Give the page one obvious primary action, visible without scrolling on a phone.',
+      confidence: assessment.confidence,
+      suitable_for_outreach: true,
+    });
+  }
+
+  return out;
+}
+
+/**
+ * The side-by-side verdict, as a finding.
+ *
+ * Only raised when the company comes off worse: "you look the same as your competitors"
+ * is not something to open a conversation with, and "you look better" is not our news to
+ * deliver. A `cannot_tell` produces nothing at all.
+ */
+export function visualComparisonFindings(comparison: VisualComparison, competitorNames: string[]): NewFinding[] {
+  if (comparison.company_stands_out_as !== 'clearly_worse') return [];
+
+  return [
+    {
+      title: 'The site looks dated next to its competitors',
+      category: 'visual_design',
+      severity: 'high',
+      page_url: null,
+      evidence:
+        `Compared side by side with ${competitorNames.join(', ')}: ${comparison.gap_summary}` +
+        (comparison.visible_differences.length > 0
+          ? ` Visible differences: ${comparison.visible_differences.join('; ')}.`
+          : ''),
+      measurement_source: 'ai_interpretation',
+      business_impact:
+        'Buyers in this market compare two or three sites in the same session, and the one that looks least current loses the enquiry before anyone reads the copy.',
+      recommended_action:
+        'Rebuild the front end to at least the standard the competitors already hold, starting with the first screen.',
+      confidence: comparison.confidence,
+      suitable_for_outreach: true,
+      created_at: nowIso(),
+    },
+  ];
 }

@@ -56,6 +56,7 @@ function baseInput(overrides: Partial<ScoringInput> = {}): ScoringInput {
     audit: auditFor(['viewport', 'responsive', 'meta_description', 'canonical', 'sitemap']),
     playbook: clinicPlaybook,
     ai,
+    visual: null,
     competitors: summarizeCompetitorUsage([], null),
     sector_confidence: 'high',
     min_score_for_outreach: 40,

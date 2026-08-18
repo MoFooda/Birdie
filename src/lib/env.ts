@@ -32,6 +32,12 @@ export const env = {
   pagespeedApiKey: process.env.PAGESPEED_API_KEY ?? '',
   openaiApiKey: process.env.OPENAI_API_KEY ?? '',
   openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
+  /**
+   * Model for the visual pass. Kept separate from OPENAI_MODEL because the text calls and
+   * the image calls have different cost profiles, and because a text-only model set here
+   * by mistake would silently make the visual pass useless.
+   */
+  visionModel: process.env.OPENAI_VISION_MODEL ?? 'gpt-4.1-mini',
   serperApiKey: process.env.SERPER_API_KEY ?? '',
 
   triggerSecretKey: process.env.TRIGGER_SECRET_KEY ?? '',
@@ -103,6 +109,23 @@ export function connectionStatuses(): ConnectionStatus[] {
         : env.openaiApiKey
           ? `Live model: ${env.openaiModel}.`
           : 'No key — AI interpretation and outreach are reported as not run.',
+    },
+    {
+      key: 'vision',
+      label: 'Visual analysis (how the site looks)',
+      configured: !!env.openaiApiKey && (env.renderer === 'playwright' || !!env.firecrawlApiKey),
+      mode: demo
+        ? 'disabled'
+        : !env.openaiApiKey || (env.renderer !== 'playwright' && !env.firecrawlApiKey)
+          ? 'disabled'
+          : 'live',
+      detail: demo
+        ? 'Demo mode has no rendered screenshots, so the visual pass reports that it did not run rather than inventing a description.'
+        : !env.openaiApiKey
+          ? 'No OpenAI key — the site is judged from its markup only, and design age is not assessed.'
+          : env.renderer !== 'playwright' && !env.firecrawlApiKey
+            ? 'No renderer captures screenshots, so there is no image to look at. Set RENDERER=playwright (free) or FIRECRAWL_API_KEY.'
+            : `Live: ${env.visionModel} reads the rendered screenshots and judges layout, clarity and design era.`,
     },
     {
       key: 'search',

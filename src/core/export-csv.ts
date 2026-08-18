@@ -10,6 +10,7 @@ import type { CompanyReport } from './types';
 import { CLASSIFICATION_LABELS, ACTION_LABELS } from './scoring';
 import { WEBSITE_STATUS_LABELS } from './website-status';
 import type { CompetitorUsageSummary } from './competitor-scoring';
+import { DESIGN_ERA_LABELS, type VisualAssessment, type VisualComparison } from './visual-schemas';
 
 export function csvEscape(value: unknown): string {
   if (value == null) return '';
@@ -53,6 +54,9 @@ export const EXPORT_HEADERS = [
   'primary_problem',
   'primary_evidence',
   'competitor_pattern',
+  'design_era',
+  'design_era_confidence',
+  'visual_verdict_vs_competitors',
   'best_outreach_angle',
   'email_1_subject',
   'email_1_body',
@@ -74,6 +78,8 @@ export function reportToCsvRow(report: CompanyReport, baseUrl: string): string[]
   const { company, contacts, status_check, score, messages, flow } = report;
   const contact = contacts[0] ?? null;
   const summary = (score?.competitor_summary ?? null) as CompetitorUsageSummary | null;
+  const visual = (report.audit_run?.visual_assessment ?? null) as VisualAssessment | null;
+  const visualComparison = (report.audit_run?.visual_comparison ?? null) as VisualComparison | null;
 
   const msg = (step: number) => messages.find((m) => m.step === step) ?? null;
 
@@ -121,6 +127,11 @@ export function reportToCsvRow(report: CompanyReport, baseUrl: string): string[]
     score?.primary_reason ?? '',
     (score?.supporting_evidence ?? []).slice(0, 3).join(' | '),
     competitorPattern,
+    // "not assessed" rather than an empty cell: a blank reads as "fine", and this column
+    // is empty far more often than it is negative.
+    visual ? DESIGN_ERA_LABELS[visual.design_era] : 'not assessed',
+    visual?.design_era_confidence ?? '',
+    visualComparison ? visualComparison.company_stands_out_as.replace(/_/g, ' ') : 'not compared',
     bestAngle,
     msg(1)?.subject ?? '',
     msg(1)?.body ?? '',

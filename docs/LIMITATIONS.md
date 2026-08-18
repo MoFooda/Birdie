@@ -30,10 +30,37 @@ single-file edit; see [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md).
   nothing about what it cannot.
 - **Content-freshness detection is weak.** "Updated content" looks for a current-or-recent
   year alongside a blog or product section. That is a proxy, not a real freshness check.
-- **Screenshots are homepage-only, mobile viewport.** No desktop capture in the default
-  flow.
+- **Screenshots are homepage-only.** The mobile above-the-fold frame is always captured
+  where a renderer supports it; the full-page frame is only captured when the visual pass
+  is enabled to read it. No desktop capture in the default flow, and no interior page is
+  ever captured — so the visual verdict covers the homepage and nothing else.
 - **`robots.txt` and `sitemap.xml` are only fetched by the direct HTTP scraper**, not the
   Firecrawl path — so those two checks report "not measured" when Firecrawl is in use.
+
+---
+
+## The visual pass
+
+- **It sees one page.** A homepage that photographs well and an ordering flow that does
+  not will score as if the whole site looked fine.
+- **Design era is a judgement about visual convention, not a fact about the codebase.**
+  A recently built site in a deliberately retro style can read as dated; a 2011 site
+  restyled last year can read as current. That is why the era is always a range with a
+  confidence, why low-confidence and `cannot_tell` answers are dropped from the score
+  entirely, and why the model is required to list the cues behind the call.
+- **Two different runs can disagree.** Unlike every measured check in this system, this
+  one is not deterministic. Re-running a company can move the visual dimensions by a few
+  points and, occasionally, shift the era by one band.
+- **It cannot see what a screenshot cannot show** — hover states, animation, anything
+  behind a cookie banner or an interstitial that renders over the page, and anything
+  below the captured area when only the first screen was taken.
+- **The competitor comparison is first screens only**, deliberately: four full-page images
+  would cost more to send than the judgement is worth. It says which homepage looks more
+  current, not which website is better.
+- **In demo mode it does not run at all.** The fixture adapter has no rendered page to
+  look at and reports that, rather than producing visual prose that would read as real.
+
+---
 
 ## What we deliberately do not do
 

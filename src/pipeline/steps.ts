@@ -1,5 +1,5 @@
 /**
- * The eleven per-company pipeline steps.
+ * The twelve per-company pipeline steps.
  *
  * Each step is a pure function of (store, providers, company) that writes its own slice
  * of the report and returns a summary. Steps are:
@@ -18,7 +18,14 @@ import type { Providers } from '@/providers/types';
 import { classifyWebsiteStatus, isAuditable, isMeasurementBlocked, WEBSITE_STATUS_LABELS } from '@/core/website-status';
 import { normalizeDomain } from '@/core/domain';
 import { runTechnicalAudit, auditSignalMap, type ScrapedSite, type TechnicalAudit, type PageSpeedResult } from '@/core/audit-checks';
-import { auditFindings, statusFindings, type NewFinding } from '@/core/findings';
+import {
+  auditFindings,
+  statusFindings,
+  visualComparisonFindings,
+  visualFindings,
+  type NewFinding,
+} from '@/core/findings';
+import { DESIGN_ERA_LABELS, type VisualAssessment, type VisualComparison } from '@/core/visual-schemas';
 import { matchPlaybook } from '@/core/playbooks';
 import { sectorDetectionSchema, websiteAssessmentSchema, competitorValidationSchema, outreachFlowSchema } from '@/core/schemas';
 import { summarizeCompetitorUsage, type CompetitorAnalysis, type CompetitorUsageSummary } from '@/core/competitor-scoring';
@@ -92,6 +99,9 @@ async function ensureAuditRun(ctx: StepContext) {
     technical_audit: null,
     ai_assessment: null,
     competitor_summary: null,
+    visual_assessment: null,
+    visual_unavailable_reason: null,
+    visual_comparison: null,
   });
 }
 
@@ -158,6 +168,7 @@ async function checkWebsiteStatus(ctx: StepContext): Promise<StepResult> {
       redirect_chain: [],
       checked_at: new Date().toISOString(),
       screenshot_url: null,
+      screenshot_full_page_url: null,
       status_reason: classification.reason,
       evidence: classification.evidence,
       confidence: classification.confidence,
@@ -181,6 +192,7 @@ async function checkWebsiteStatus(ctx: StepContext): Promise<StepResult> {
       redirect_chain: [],
       checked_at: new Date().toISOString(),
       screenshot_url: null,
+      screenshot_full_page_url: null,
       status_reason: `The website check could not be completed: ${result.error ?? 'provider error'}.`,
       evidence: [`provider: ${result.provider}`],
       confidence: 'low',
@@ -192,10 +204,16 @@ async function checkWebsiteStatus(ctx: StepContext): Promise<StepResult> {
   const classification = classifyWebsiteStatus(result.data);
 
   let screenshotUrl: string | null = null;
+  let fullPageUrl: string | null = null;
   if (isAuditable(classification.status) && result.data.finalUrl) {
-    const shot = await ctx.providers.screenshot.capture(result.data.finalUrl, 'mobile');
+    // The full-page frame is only worth capturing when something is going to read it.
+    // With Playwright it is free; with Firecrawl it rides along in the same scrape.
+    const shot = await ctx.providers.screenshot.capture(result.data.finalUrl, 'mobile', {
+      fullPage: ctx.providers.vision.live,
+    });
     await track(ctx, 'screenshot', shot);
     screenshotUrl = shot.ok ? (shot.data?.url ?? null) : null;
+    fullPageUrl = shot.ok ? (shot.data?.full_page ?? null) : null;
   }
 
   await ctx.store.saveStatusCheck({
@@ -208,6 +226,7 @@ async function checkWebsiteStatus(ctx: StepContext): Promise<StepResult> {
     redirect_chain: result.data.redirectChain,
     checked_at: new Date().toISOString(),
     screenshot_url: screenshotUrl,
+    screenshot_full_page_url: fullPageUrl,
     status_reason: classification.reason,
     evidence: classification.evidence,
     confidence: classification.confidence,
@@ -415,7 +434,77 @@ async function detectSector(ctx: StepContext): Promise<StepResult> {
 }
 
 // ---------------------------------------------------------------------------
-// 6. discover-competitors
+// 6. analyze-visual-design
+// ---------------------------------------------------------------------------
+
+/**
+ * Look at the site rather than read it.
+ *
+ * Everything before this step judges the site from its markup, which cannot answer the
+ * question a prospect actually asks: *does this look like a business I would buy from?*
+ * A site can carry every tag the audit checks for and still look untouched since 2012.
+ *
+ * The step is strictly gated on having a real screenshot. Where there is no image, it
+ * records why and stops — describing a page it never saw would be exactly the fabrication
+ * this product exists to avoid, and the scoring engine treats the missing item as
+ * unmeasured rather than as a failure.
+ */
+async function analyzeVisualDesign(ctx: StepContext): Promise<StepResult> {
+  const company = await loadCompany(ctx);
+  const check = await ctx.store.getStatusCheck(company.id);
+
+  const unavailable = async (reason: string): Promise<StepResult> => {
+    await ensureAuditRun(ctx);
+    await ctx.store.patchAuditRun(company.id, {
+      visual_assessment: null,
+      visual_unavailable_reason: reason,
+    });
+    return skip(reason);
+  };
+
+  if (!check || !isAuditable(check.status)) {
+    return unavailable(
+      `There is no rendered page to look at — website status is "${check ? WEBSITE_STATUS_LABELS[check.status] : 'unknown'}".`,
+    );
+  }
+
+  if (!check.screenshot_url) {
+    return unavailable('No screenshot was captured for this site, so it was not assessed visually.');
+  }
+
+  const result = await ctx.providers.vision.assess({
+    company_name: company.name,
+    sub_sector: company.sub_sector,
+    expected_website_role: company.expected_website_role,
+    above_fold: check.screenshot_url,
+    full_page: check.screenshot_full_page_url,
+  });
+  await track(ctx, 'visual_assessment', result);
+
+  if (!result.ok || !result.data) {
+    return unavailable(`The visual assessment did not run: ${result.error ?? 'provider error'}.`);
+  }
+
+  const assessment = result.data;
+
+  await ensureAuditRun(ctx);
+  await ctx.store.patchAuditRun(company.id, {
+    visual_assessment: assessment,
+    visual_unavailable_reason: null,
+  });
+
+  // The visual findings themselves are written in `calculate-scores`, alongside every
+  // other finding: that step's write is replace-by-company, so anything saved here would
+  // be dropped when it runs. Keeping all finding writes in one place is what makes the
+  // finding set identical no matter how often the pipeline is re-run.
+  return ok(
+    `Visual assessment complete. ${DESIGN_ERA_LABELS[assessment.design_era]} (${assessment.design_era_confidence} confidence), ` +
+      `${assessment.findings.length} visual finding(s).`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 7. discover-competitors
 // ---------------------------------------------------------------------------
 
 /** Domains that are never competitors: directories, marketplaces, social platforms. */
@@ -493,7 +582,7 @@ function demoPoolKey(company: Company): string {
 }
 
 // ---------------------------------------------------------------------------
-// 7. validate-competitors
+// 8. validate-competitors
 // ---------------------------------------------------------------------------
 
 async function validateCompetitors(ctx: StepContext): Promise<StepResult> {
@@ -562,7 +651,7 @@ async function validateCompetitors(ctx: StepContext): Promise<StepResult> {
 }
 
 // ---------------------------------------------------------------------------
-// 8. analyze-competitor-websites
+// 9. analyze-competitor-websites
 // ---------------------------------------------------------------------------
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -655,6 +744,7 @@ async function analyzeCompetitorWebsites(ctx: StepContext): Promise<StepResult> 
         website_status: 'unknown_needs_review',
         usage_score: 0,
         signals: {},
+        screenshot_url: null,
         evidence: [`Competitor site could not be checked: ${probe.error ?? 'provider error'}`],
         source: 'discovered',
         created_at: new Date().toISOString(),
@@ -666,6 +756,8 @@ async function analyzeCompetitorWebsites(ctx: StepContext): Promise<StepResult> 
     let site: ScrapedSite | null = null;
     let audit: TechnicalAudit | null = null;
 
+    let screenshotUrl: string | null = null;
+
     if (isAuditable(classification.status)) {
       const scraped = await ctx.providers.scraper.scrapeSite(domain, { maxPages: 4 });
       await track(ctx, 'competitor_scrape', scraped);
@@ -675,6 +767,15 @@ async function analyzeCompetitorWebsites(ctx: StepContext): Promise<StepResult> 
           mobile: null,
           desktop: null,
         });
+      }
+
+      // Only captured when something will actually look at it. Above the fold only: the
+      // comparison is about first impressions, and four full-page images would cost more
+      // to send than the judgement is worth.
+      if (ctx.providers.vision.live && probe.data.finalUrl) {
+        const shot = await ctx.providers.screenshot.capture(probe.data.finalUrl, 'mobile');
+        await track(ctx, 'competitor_screenshot', shot);
+        screenshotUrl = shot.ok ? (shot.data?.url ?? null) : null;
       }
     }
 
@@ -702,6 +803,7 @@ async function analyzeCompetitorWebsites(ctx: StepContext): Promise<StepResult> 
       website_status: classification.status,
       usage_score: 0,
       signals: signals as Record<string, boolean>,
+      screenshot_url: screenshotUrl,
       evidence,
       source: 'discovered',
       created_at: new Date().toISOString(),
@@ -709,11 +811,67 @@ async function analyzeCompetitorWebsites(ctx: StepContext): Promise<StepResult> 
   }
 
   await ctx.store.saveCompetitors(company.id, rows);
-  return ok(`Analysed ${rows.length} competitor website(s).`);
+
+  const comparison = await compareVisually(ctx, company, rows);
+
+  return ok(`Analysed ${rows.length} competitor website(s).${comparison ? ` ${comparison}` : ''}`);
 }
 
+/**
+ * Put the company's first screen next to its competitors' and ask which one a customer
+ * would rather deal with.
+ *
+ * This is the single most quotable output the tool produces — a prospect can check it in
+ * five seconds by opening two tabs — which is exactly why it is gated hard. It runs only
+ * when there are real captures on both sides, and a failure is recorded as "not compared"
+ * rather than smoothed over.
+ */
+async function compareVisually(
+  ctx: StepContext,
+  company: Company,
+  rows: Parameters<DataStore['saveCompetitors']>[1],
+): Promise<string | null> {
+  if (!ctx.providers.vision.live) return null;
+
+  const check = await ctx.store.getStatusCheck(company.id);
+  const withShots = rows
+    .filter((r): r is typeof r & { screenshot_url: string } => !!r.screenshot_url)
+    .slice(0, 3);
+
+  if (!check?.screenshot_url || withShots.length === 0) {
+    await ensureAuditRun(ctx);
+    await ctx.store.patchAuditRun(company.id, { visual_comparison: null });
+    return 'No side-by-side comparison — screenshots were not available on both sides.';
+  }
+
+  const result = await ctx.providers.vision.compare({
+    company_name: company.name,
+    sub_sector: company.sub_sector,
+    company_shot: check.screenshot_url,
+    competitors: withShots.map((r) => ({ name: r.name, shot: r.screenshot_url })),
+  });
+  await track(ctx, 'visual_comparison', result);
+
+  await ensureAuditRun(ctx);
+  await ctx.store.patchAuditRun(company.id, {
+    visual_comparison: result.ok && result.data ? result.data : null,
+  });
+
+  if (!result.ok || !result.data) {
+    return `The visual comparison did not run: ${result.error ?? 'provider error'}.`;
+  }
+  return `Against the ${withShots.length} competitor(s) captured, it looks ${STANDS_OUT_LABELS[result.data.company_stands_out_as]}.`;
+}
+
+const STANDS_OUT_LABELS: Record<VisualComparison['company_stands_out_as'], string> = {
+  clearly_better: 'clearly better',
+  comparable: 'about the same',
+  clearly_worse: 'clearly worse',
+  cannot_tell: 'too close to call from the screenshots',
+};
+
 // ---------------------------------------------------------------------------
-// 9. calculate-scores
+// 10. calculate-scores
 // ---------------------------------------------------------------------------
 
 /**
@@ -802,16 +960,29 @@ async function calculateScoresStep(ctx: StepContext): Promise<StepResult> {
     }
   }
 
+  // --- Visual assessment ----------------------------------------------------
+  // Written by `analyze-visual-design`; read here so its findings land in the same
+  // replace-by-company write as everything else.
+  const visual = (auditRun.visual_assessment as VisualAssessment | null) ?? null;
+  const visualComparison = (auditRun.visual_comparison as VisualComparison | null) ?? null;
+
+  // --- Competitor summary ---------------------------------------------------
+  const competitors = await ctx.store.listCompetitors(company.id);
+
   // Measured findings first, AI interpretation after — each tagged with its source so
   // the report can keep the two visually distinct.
   await ctx.store.saveFindings(company.id, [
     ...statusFindings(check.status, check.status_reason, check.evidence),
     ...(audit ? auditFindings(audit, playbook) : []),
     ...aiFindingRows,
+    ...(visual ? visualFindings(visual) : []),
+    ...(visualComparison
+      ? visualComparisonFindings(
+          visualComparison,
+          competitors.filter((c) => c.screenshot_url).map((c) => c.name),
+        )
+      : []),
   ]);
-
-  // --- Competitor summary ---------------------------------------------------
-  const competitors = await ctx.store.listCompetitors(company.id);
   const analyses: CompetitorAnalysis[] = competitors.map((c) => ({
     name: c.name,
     website: c.website,
@@ -831,6 +1002,7 @@ async function calculateScoresStep(ctx: StepContext): Promise<StepResult> {
     audit,
     playbook,
     ai,
+    visual,
     competitors: summary,
     sector_confidence: company.sector_confidence,
     min_score_for_outreach: ctx.settings.min_score_for_outreach,
@@ -884,7 +1056,7 @@ async function calculateScoresStep(ctx: StepContext): Promise<StepResult> {
 }
 
 // ---------------------------------------------------------------------------
-// 10. generate-outreach
+// 11. generate-outreach
 // ---------------------------------------------------------------------------
 
 async function generateOutreach(ctx: StepContext): Promise<StepResult> {
@@ -1031,7 +1203,7 @@ function severityRank(s: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// 11. finalize-company-report
+// 12. finalize-company-report
 // ---------------------------------------------------------------------------
 
 async function finalizeCompanyReport(ctx: StepContext): Promise<StepResult> {
@@ -1069,6 +1241,7 @@ export const STEP_HANDLERS: Record<PipelineStep, (ctx: StepContext) => Promise<S
   'scrape-company-website': scrapeCompanyWebsite,
   'run-pagespeed-audit': runPageSpeedAudit,
   'detect-sector-and-business-model': detectSector,
+  'analyze-visual-design': analyzeVisualDesign,
   'discover-competitors': discoverCompetitors,
   'validate-competitors': validateCompetitors,
   'analyze-competitor-websites': analyzeCompetitorWebsites,

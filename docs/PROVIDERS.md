@@ -15,7 +15,7 @@ Check the live state of all of them at **Settings** (`/settings`).
    supabase link --project-ref <your-ref>
    supabase db push
    ```
-   Or paste `supabase/migrations/0001_init.sql` into the SQL editor.
+   Or paste the files in `supabase/migrations/` into the SQL editor, in filename order.
 3. Copy **Project URL**, **anon key** and **service_role key** from Project Settings → API.
 4. Seed the sector playbooks:
    ```bash
@@ -108,16 +108,54 @@ limitation. Never treated as failed checks.
 1. Create a key at <https://platform.openai.com/api-keys>.
 2. `OPENAI_API_KEY=sk-...` and optionally `OPENAI_MODEL=gpt-4.1-mini`.
 
-Used for three operations, all with structured outputs validated by Zod
+Used for three text operations, all with structured outputs validated by Zod
 (`src/core/schemas.ts`): sector/business-model detection, website interpretation, and
-outreach generation.
+outreach generation — plus the two visual operations below.
 
 A response that fails schema validation is **discarded**, not repaired — the step reports
 an error and the company is flagged for review.
 
-**Without it:** those three steps report "not run". The technical audit, status
-classification and competitor analysis still work, so the report remains useful; affected
-companies are flagged for manual review and no outreach is generated.
+**Without it:** those steps report "not run". The technical audit, status classification
+and competitor analysis still work, so the report remains useful; affected companies are
+flagged for manual review and no outreach is generated.
+
+---
+
+## OpenAI vision — what the site actually looks like
+
+Needs **two** things at once: `OPENAI_API_KEY`, and a renderer that produces screenshots
+(`RENDERER=playwright`, which is free, or `FIRECRAWL_API_KEY`). Set the model with
+`OPENAI_VISION_MODEL` (default `gpt-4.1-mini`).
+
+Everything else in the audit is read from markup, which cannot answer the question a
+prospect asks first: *does this look like a business I would buy from?* A site can carry
+every tag we check for and still look untouched since 2012. Two operations close that gap:
+
+- **`assess`** — reads the mobile above-the-fold capture and the full-page capture, and
+  returns seven 0–100 dimensions, a design-era range with a confidence and the visual cues
+  behind it, whether the first screen states the offer, and whether a primary action is
+  visible without scrolling.
+- **`compare`** — puts the company's first screen next to up to three competitors' and
+  says whether it reads as clearly better, comparable or clearly worse, with concrete
+  differences a person could check by opening two tabs.
+
+Three rules constrain it:
+
+1. **No image, no verdict.** With no screenshot the step records *why* it did not run.
+   Falling back to describing the HTML would be exactly the invented evidence this product
+   exists to avoid, and the demo adapter refuses on the same grounds rather than writing
+   plausible visual prose.
+2. **Every claim carries what was observed.** The schema requires it, so a reviewer can
+   check each one against the screenshot sitting beside it in the report.
+3. **Design era is a range with a confidence, never a year.** A `cannot_tell` answer, or
+   any low-confidence era call, is left unmeasured rather than guessed at.
+
+Both visual findings and the comparison are tagged `ai_interpretation`, so the report
+keeps them out of the measured column.
+
+**Without it:** the two visual scoring items are excluded from both sides of the ratio,
+and the score's limitations say plainly that the site was never looked at — so a
+markup-only score is never mistaken for a verdict on how the site appears.
 
 ---
 
@@ -182,8 +220,11 @@ Per company, a full run makes roughly:
 - 2 PageSpeed calls (mobile, desktop), each returning four Lighthouse categories
 - 1 Wayback Machine lookup (free)
 - 1 search + up to 5 validations + up to 3 competitor probes and crawls
-- up to 8 model calls (1 sector detection, 1 site interpretation, up to 5 competitor
+- up to 8 text model calls (1 sector detection, 1 site interpretation, up to 5 competitor
   validations — one per candidate — and 1 outreach generation)
+- up to 2 vision calls when it is enabled: 1 assessment (2 images) and 1 comparison
+  (up to 4 images). Images dominate the token cost of these two, which is why the
+  comparison uses above-the-fold captures only rather than full pages
 
 A 50-company batch is therefore on the order of 400 model calls, 100 PageSpeed calls and
 several hundred page fetches. `PIPELINE_CONCURRENCY` (default 4) caps how many companies

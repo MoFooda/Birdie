@@ -56,6 +56,7 @@ export const POST = withSession(async (ctx, request: Request, { params }: Params
     website_status: 'unknown_needs_review',
     usage_score: 0,
     signals: {},
+    screenshot_url: null,
     evidence: ['Added manually; re-run the competitor steps to measure this site.'],
     source: 'manual',
     created_at: new Date().toISOString(),

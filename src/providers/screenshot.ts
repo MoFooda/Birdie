@@ -20,7 +20,14 @@ export function createFixtureScreenshot(): ScreenshotProvider {
         const domain = normalizeDomain(url).domain;
         const spec = domain ? findSiteSpec(domain) : null;
         if (!spec) throw new Error('no demo fixture for this domain');
-        return { data: { url: `/api/demo/screenshot?domain=${encodeURIComponent(domain!)}&viewport=${viewport}` } };
+        return {
+          data: {
+            url: `/api/demo/screenshot?domain=${encodeURIComponent(domain!)}&viewport=${viewport}`,
+            // The placeholder is an HTML card, not a rendering of the site, so there is no
+            // full-page image to offer and nothing here is fit for a vision pass.
+            full_page: null,
+          },
+        };
       });
     },
   };
@@ -29,14 +36,14 @@ export function createFixtureScreenshot(): ScreenshotProvider {
 interface FirecrawlScreenshotResponse {
   success?: boolean;
   error?: string;
-  data?: { screenshot?: string };
+  data?: { screenshot?: string; fullPageScreenshot?: string };
 }
 
 export function createFirecrawlScreenshot(apiKey: string, baseUrl = 'https://api.firecrawl.dev'): ScreenshotProvider {
   return {
     name: 'firecrawl-screenshot',
     live: true,
-    async capture(url, viewport) {
+    async capture(url, viewport, options) {
       return timed('firecrawl-screenshot', true, async () => {
         const res = await retry(
           async () => {
@@ -46,7 +53,8 @@ export function createFirecrawlScreenshot(apiKey: string, baseUrl = 'https://api
               headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
               body: JSON.stringify({
                 url,
-                formats: ['screenshot'],
+                // Both formats in one scrape: two images, one credit.
+                formats: options?.fullPage ? ['screenshot', 'screenshot@fullPage'] : ['screenshot'],
                 mobile: viewport === 'mobile',
               }),
             });
@@ -59,7 +67,7 @@ export function createFirecrawlScreenshot(apiKey: string, baseUrl = 'https://api
         if (!res.ok || json.success === false || !json.data?.screenshot) {
           throw new Error(json.error ?? 'no screenshot returned');
         }
-        return { data: { url: json.data.screenshot } };
+        return { data: { url: json.data.screenshot, full_page: json.data.fullPageScreenshot ?? null } };
       });
     },
   };

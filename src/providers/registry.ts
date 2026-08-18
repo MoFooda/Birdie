@@ -17,6 +17,7 @@ import { createFixtureAi, createOpenAiProvider } from './ai';
 import { createFirecrawlScreenshot, createFixtureScreenshot } from './screenshot';
 import { createFixtureArchive, createWaybackArchive } from './archive';
 import { createPlaywrightScraper, createPlaywrightScreenshot } from './playwright';
+import { createDisabledVision, createFixtureVision, createOpenAiVision, visionRequirements } from './vision';
 
 /** A provider that is intentionally not configured. Reports `not_run`, never fabricates. */
 function unavailable(name: string, reason: string) {
@@ -46,7 +47,7 @@ function disabledAi(reason: string): AiProvider {
 
 function disabledScreenshot(reason: string): ScreenshotProvider {
   const base = unavailable('screenshot-disabled', reason);
-  return { name: base.name, live: false, capture: base.run };
+  return { name: base.name, live: false, capture: base.run as ScreenshotProvider['capture'] };
 }
 
 let cached: Providers | null = null;
@@ -62,6 +63,7 @@ export function getProviders(): Providers {
       ai: createFixtureAi(),
       screenshot: createFixtureScreenshot(),
       archive: createFixtureArchive(),
+      vision: createFixtureVision(),
     };
     return cached;
   }
@@ -95,6 +97,12 @@ export function getProviders(): Providers {
           ),
     // No key, no account, no cost — so it is always on outside demo mode.
     archive: createWaybackArchive(),
+    // Vision needs two things at once: a model that can see, and a renderer that produces
+    // a picture for it to look at. Missing either is reported, not worked around.
+    vision: (() => {
+      const blocked = visionRequirements(!!env.openaiApiKey, env.renderer, !!env.firecrawlApiKey);
+      return blocked ? createDisabledVision(blocked) : createOpenAiVision(env.openaiApiKey!, env.visionModel);
+    })(),
   };
   return cached;
 }

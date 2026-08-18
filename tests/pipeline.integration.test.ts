@@ -15,8 +15,9 @@ import { createFixturePageSpeed } from '@/providers/pagespeed';
 import { createFixtureAi } from '@/providers/ai';
 import { createFixtureScreenshot } from '@/providers/screenshot';
 import { createFixtureArchive } from '@/providers/archive';
+import { createFixtureVision } from '@/providers/vision';
 import type { Providers } from '@/providers/types';
-import type { CompanyReport } from '@/core/types';
+import { PIPELINE_STEPS, type CompanyReport } from '@/core/types';
 
 function fixtureProviders(): Providers {
   return {
@@ -26,6 +27,7 @@ function fixtureProviders(): Providers {
     ai: createFixtureAi(),
     screenshot: createFixtureScreenshot(),
     archive: createFixtureArchive(),
+    vision: createFixtureVision(),
   };
 }
 
@@ -52,13 +54,13 @@ describe('company pipeline (demo providers)', () => {
     expect(reports.length).toBeGreaterThanOrEqual(10);
   });
 
-  it('gives every company an independent job status for all eleven steps', async () => {
+  it('gives every company an independent job status for every pipeline step', async () => {
     for (const report of reports) {
       const jobs = await store.listJobRunsForCompany(report.company.id);
-      expect(jobs).toHaveLength(11);
+      expect(jobs).toHaveLength(PIPELINE_STEPS.length);
       expect(jobs.every((j) => j.status !== 'pending' && j.status !== 'running')).toBe(true);
       // Idempotency keys must be unique per (company, step).
-      expect(new Set(jobs.map((j) => j.idempotency_key)).size).toBe(11);
+      expect(new Set(jobs.map((j) => j.idempotency_key)).size).toBe(PIPELINE_STEPS.length);
     }
   });
 
