@@ -12,14 +12,33 @@ function flag(value: string | undefined, fallback = false): boolean {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }
 
+/**
+ * A blank setting means "unset", not "empty" — and certainly not "zero".
+ *
+ * `??` alone is not enough for either of these. Hosts that seed the environment from
+ * `.env.example` — Vercel does this on first import — declare every key in the file, so an
+ * unfilled one arrives as an empty string rather than as undefined. `?? 'gpt-4.1-mini'`
+ * then leaves the model name blank, and `Number('')` is 0, which would silently cap batch
+ * imports at zero companies and reject every upload with a nonsense message.
+ */
+function text(value: string | undefined, fallback: string): string {
+  return value == null || value.trim() === '' ? fallback : value;
+}
+
+function num(value: string | undefined, fallback: number): number {
+  if (value == null || value.trim() === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const env = {
   demoMode: flag(process.env.DEMO_MODE, true),
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  appUrl: text(process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'),
 
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? 'website-screenshots',
+  supabaseStorageBucket: text(process.env.SUPABASE_STORAGE_BUCKET, 'website-screenshots'),
 
   firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? '',
   /**
@@ -28,25 +47,25 @@ export const env = {
    * cost, but it needs a browser binary and roughly 400MB of memory per instance.
    * 'auto' prefers Firecrawl when a key exists, otherwise the plain HTTP scraper.
    */
-  renderer: (process.env.RENDERER ?? 'auto') as 'auto' | 'playwright' | 'firecrawl' | 'http',
+  renderer: text(process.env.RENDERER, 'auto') as 'auto' | 'playwright' | 'firecrawl' | 'http',
   pagespeedApiKey: process.env.PAGESPEED_API_KEY ?? '',
   openaiApiKey: process.env.OPENAI_API_KEY ?? '',
-  openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
+  openaiModel: text(process.env.OPENAI_MODEL, 'gpt-4.1-mini'),
   /**
    * Model for the visual pass. Kept separate from OPENAI_MODEL because the text calls and
    * the image calls have different cost profiles, and because a text-only model set here
    * by mistake would silently make the visual pass useless.
    */
-  visionModel: process.env.OPENAI_VISION_MODEL ?? 'gpt-4.1-mini',
+  visionModel: text(process.env.OPENAI_VISION_MODEL, 'gpt-4.1-mini'),
   serperApiKey: process.env.SERPER_API_KEY ?? '',
 
   triggerSecretKey: process.env.TRIGGER_SECRET_KEY ?? '',
   triggerProjectRef: process.env.TRIGGER_PROJECT_REF ?? '',
 
   /** Per-provider concurrency for a batch run. */
-  pipelineConcurrency: Number(process.env.PIPELINE_CONCURRENCY ?? 4),
+  pipelineConcurrency: num(process.env.PIPELINE_CONCURRENCY, 4),
   /** Companies allowed in one import. */
-  maxCompaniesPerBatch: Number(process.env.MAX_COMPANIES_PER_BATCH ?? 50),
+  maxCompaniesPerBatch: num(process.env.MAX_COMPANIES_PER_BATCH, 50),
 } as const;
 
 export const hasSupabase = () => !!env.supabaseUrl && !!env.supabaseAnonKey;
