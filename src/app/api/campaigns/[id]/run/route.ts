@@ -3,8 +3,17 @@ import { ownedCampaign, withSession } from '@/lib/api';
 import { dispatchCampaignRun } from '@/pipeline/dispatch';
 
 export const dynamic = 'force-dynamic';
-// A 50-company batch can take a while when the runner is in-process and `wait` is set.
-export const maxDuration = 800;
+/**
+ * 300 seconds — the ceiling every Vercel plan accepts, Hobby included. A higher value is
+ * not merely capped there; the build is rejected outright.
+ *
+ * A 50-company batch with `wait: true` can outrun this, and the platform will kill the
+ * request when it does. That is survivable rather than destructive: every step is
+ * idempotent and its outcome is recorded in `job_runs`, so re-running the batch picks up
+ * where it stopped instead of duplicating work. The durable answer for batches that size
+ * is Trigger.dev — see docs/DEPLOYMENT.md.
+ */
+export const maxDuration = 300;
 
 type Params = { params: Promise<{ id: string }> };
 

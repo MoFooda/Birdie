@@ -57,6 +57,28 @@ The e2e test boots the production build and drives the workflow over HTTP, which
    ```
 3. Deploy.
 
+**Do not let the import wizard seed the environment from `.env.example`.** It declares
+every optional key, and Vercel adds them all as empty strings — which is not the same as
+absent. The code defends against this (`src/lib/env.ts` treats a blank value as unset),
+but an empty variable list is still the cleaner starting point: add only the keys you have
+real values for.
+
+### Function timeouts
+
+`api/campaigns/[id]/run` declares `maxDuration = 300`, the ceiling every plan accepts —
+Hobby included. Setting it higher does not get capped, it **fails the build**:
+
+```
+Builder returned invalid maxDuration value for Serverless Function
+"api/campaigns/[id]/run". Serverless Functions must have a maxDuration
+between 1 and 300 for plan hobby.
+```
+
+A large batch run with `wait: true` can exceed 300 seconds and be killed mid-run. Nothing
+is corrupted when that happens — every step is idempotent and recorded in `job_runs`, so
+re-running the batch resumes rather than duplicates. For batches that size, use
+Trigger.dev.
+
 ### Important: use Trigger.dev in serverless
 
 On Vercel, a background promise is not guaranteed to survive the response. The in-process
