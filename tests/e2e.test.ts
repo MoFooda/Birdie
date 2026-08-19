@@ -15,6 +15,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { DEMO_CSV_HEADERS, demoCsvRows } from '@/demo/seed';
 import { suggestMapping } from '@/core/csv-mapping';
+import { PIPELINE_STEPS } from '@/core/types';
 
 const PORT = 3987;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -168,7 +169,7 @@ describe('end-to-end happy path', () => {
     const progress = await (await api(`/api/campaigns/${campaignId}/progress`)).json();
     expect(progress.percent).toBe(100);
     expect(progress.total_companies).toBeGreaterThanOrEqual(10);
-    expect(progress.per_company[0].steps).toHaveLength(11);
+    expect(progress.per_company[0].steps).toHaveLength(PIPELINE_STEPS.length);
     expect(progress.campaign_status).toBe('completed');
   }, 180_000);
 

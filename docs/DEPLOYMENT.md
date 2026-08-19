@@ -47,14 +47,17 @@ The e2e test boots the production build and drives the workflow over HTTP, which
 
 1. Import the repository. The app is at the repository root, so leave **Root Directory**
    at its default.
-2. Add the environment variables from `.env.example`. At minimum:
+2. Add the environment variables you actually have values for. To run the hosted demo —
+   real persistence, fixture analysis, no provider keys and no provider cost:
    ```
-   DEMO_MODE=false
+   DEMO_MODE=true
    NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
    NEXT_PUBLIC_SUPABASE_URL=...
    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
    SUPABASE_SERVICE_ROLE_KEY=...
    ```
+   Set `DEMO_MODE=false` once the provider keys are in place. Storage follows the Supabase
+   credentials alone and never `DEMO_MODE`, so the two can be flipped independently.
 3. Deploy.
 
 **Do not let the import wizard seed the environment from `.env.example`.** It declares
