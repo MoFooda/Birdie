@@ -34,8 +34,15 @@ in-memory store, and on a serverless host each request can land in a different i
 so a campaign you just created will seem to vanish.
 
 1. Create a project at [supabase.com](https://supabase.com) (the free tier is enough).
-2. SQL Editor → run every file in `supabase/migrations/` in filename order:
-   `0001_init.sql`, then `0002_visual_analysis.sql`, then `0003_demo_owner.sql`.
+2. SQL Editor → run every file in `supabase/migrations/` in filename order, checking each
+   reports success before starting the next. After the first, confirm the tables really
+   landed — a script run against a project that is still provisioning can report success
+   and do nothing:
+   ```sql
+   select count(*) from information_schema.tables where table_schema = 'public';
+   ```
+   It must return 18. If a table is missing later, the API layer caches the schema —
+   `notify pgrst, 'reload schema';` forces it to re-read.
 3. SQL Editor → paste and run `supabase/seed.sql`.
    **Do not skip this.** Scoring needs approved sector playbooks; without them every
    company falls back to an indeterminate placeholder and gets flagged for review.

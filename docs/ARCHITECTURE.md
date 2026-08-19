@@ -96,6 +96,14 @@ what visitors in this sector come to the site to do, which step 5 establishes. I
 before the competitor steps so the comparison in step 9 has the company's own capture to
 put next to theirs.
 
+### Adding a pipeline step
+
+`PIPELINE_STEPS` in `src/core/types.ts` has a mirror in Postgres: `job_runs.step` is
+constrained to the `pipeline_step` enum. Adding a step to the array without a migration
+declaring it on the enum passes the type checker and then kills every company's run at
+that step, because the job-run insert is rejected. `tests/schema-sync.test.ts` compares
+the two and fails the moment they drift.
+
 ### Idempotency
 
 Every per-company write is **replace-by-company**, not append. Re-running a step deletes

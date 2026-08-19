@@ -126,6 +126,19 @@ export async function runCompanyPipeline(options: RunCompanyOptions): Promise<Co
   return summary;
 }
 
+/**
+ * Record a step's outcome in `job_runs`.
+ *
+ * Deliberately swallows its own failures. This is bookkeeping: it drives the progress grid
+ * and the retry buttons, and losing a row degrades what the UI can show. Letting it throw
+ * does something far worse — it is called outside the per-step try/catch, so a failed
+ * insert propagates out of `runCompanyPipeline` and abandons every remaining step for that
+ * company.
+ *
+ * That is not hypothetical. `job_runs.step` is an enum, and a pipeline step added in code
+ * without a matching migration made every company stop dead at that step with no useful
+ * error anywhere. A campaign must not be lost because a log line could not be written.
+ */
 async function record(
   store: DataStore,
   campaignId: string,
@@ -137,21 +150,29 @@ async function record(
   errorMessage: string | null,
   options: { started?: boolean } = {},
 ): Promise<void> {
-  const key = idempotencyKey(campaignId, companyId, step);
-  const existing = (await store.listJobRunsForCompany(companyId)).find((j) => j.idempotency_key === key);
-  await store.upsertJobRun({
-    id: existing?.id,
-    campaign_id: campaignId,
-    company_id: companyId,
-    step,
-    status,
-    attempt,
-    idempotency_key: key,
-    started_at: options.started ? new Date().toISOString() : (existing?.started_at ?? new Date().toISOString()),
-    finished_at: status === 'running' ? null : new Date().toISOString(),
-    error_message: errorMessage,
-    output_summary: outputSummary,
-  });
+  try {
+    const key = idempotencyKey(campaignId, companyId, step);
+    const existing = (await store.listJobRunsForCompany(companyId)).find((j) => j.idempotency_key === key);
+    await store.upsertJobRun({
+      id: existing?.id,
+      campaign_id: campaignId,
+      company_id: companyId,
+      step,
+      status,
+      attempt,
+      idempotency_key: key,
+      started_at: options.started ? new Date().toISOString() : (existing?.started_at ?? new Date().toISOString()),
+      finished_at: status === 'running' ? null : new Date().toISOString(),
+      error_message: errorMessage,
+      output_summary: outputSummary,
+    });
+  } catch (err) {
+    // Surfaced in the host's logs; the analysis itself carries on.
+    console.error(
+      `job_runs write failed for ${companyId} at ${step} (${status}):`,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
 }
 
 /** Run an async mapper over items with a fixed number of workers. */
