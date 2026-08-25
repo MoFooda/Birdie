@@ -5,6 +5,7 @@ import { getStore } from '@/store';
 import { dispatchMode } from '@/pipeline/dispatch';
 import { Badge, Button, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/ui';
 import { CampaignProgressPanel } from './progress-panel';
+import { PIPELINE_STEPS } from '@/core/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             </CardHeader>
             <CardBody className="text-sm text-muted">
               <p>
-                Each company runs eleven steps independently.{' '}
+                {/* Counted, not spelled out: the prose went stale the moment a twelfth
+                    step was added, and told every user the wrong number. */}
+                Each company runs {PIPELINE_STEPS.length} steps independently.{' '}
                 {mode === 'trigger'
                   ? 'Steps are queued on Trigger.dev, which handles retries, concurrency limits and durability.'
                   : 'Trigger.dev is not configured, so steps run on the built-in in-process runner with the same retry, concurrency and idempotency behaviour.'}
