@@ -13,10 +13,10 @@ import { runCampaignPipeline, runCompanyPipeline } from '@/pipeline/runner';
 import { createFixtureScraper } from '@/providers/scraper';
 import { createFixtureSearch } from '@/providers/search';
 import { createFixturePageSpeed } from '@/providers/pagespeed';
-import { createFixtureAi } from '@/providers/ai';
+import { buildAiInput, createFixtureAi } from '@/providers/ai';
 import { createFixtureScreenshot } from '@/providers/screenshot';
 import { createFixtureArchive } from '@/providers/archive';
-import { createFixtureVision } from '@/providers/vision';
+import { createFixtureVision, VISION_SYSTEM_PROMPT } from '@/providers/vision';
 import { retry } from '@/providers/types';
 import type { AiProvider, PageSpeedProvider, Providers, SearchProvider } from '@/providers/types';
 
@@ -305,5 +305,25 @@ describe('retry helper', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/**
+ * The OpenAI adapters ask for `json_object` output, which the API refuses unless the word
+ * "JSON" appears in the input. Nothing in the prompts said so, so every live call failed
+ * with a 400 while the fixture-backed tests stayed green — the live path had never run.
+ */
+describe('the json_object precondition', () => {
+  it('names the format in the input the text adapter sends', () => {
+    const input = buildAiInput({
+      system: 'You classify companies into a sector for a website-opportunity analysis.',
+      user: '{"name":"Acme"}',
+    });
+    const blob = input.map((m) => m.content).join(' ');
+    expect(blob.toLowerCase()).toContain('json');
+  });
+
+  it('names it in the vision adapter too', () => {
+    expect(VISION_SYSTEM_PROMPT.toLowerCase()).toContain('json');
   });
 });

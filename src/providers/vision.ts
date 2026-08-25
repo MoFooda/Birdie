@@ -45,7 +45,7 @@ export interface VisionProvider extends ProviderMeta {
   compare(context: ComparisonContext): Promise<ProviderResult<VisualComparison>>;
 }
 
-const SYSTEM = `You are judging a business website from screenshots, for an agency deciding
+export const VISION_SYSTEM_PROMPT = `You are judging a business website from screenshots, for an agency deciding
 whether the site needs rebuilding.
 
 Rules you must not break:
@@ -55,7 +55,11 @@ Rules you must not break:
   button and form styling, layout conventions. Give a range, never a specific year, and
   say "cannot_tell" when the screenshot does not support a call.
 - Do not invent traffic, revenue or conversion numbers.
-- Score 0-100 where 100 is excellent.`;
+- Score 0-100 where 100 is excellent.
+
+Reply with a single JSON object and nothing else — no prose, no code fences. (The API
+rejects a request for JSON output unless the word appears in the input, so this line is
+load-bearing, not decoration.)`;
 
 function imagePart(dataUri: string) {
   return { type: 'input_image' as const, image_url: dataUri, detail: 'auto' as const };
@@ -87,7 +91,7 @@ export function createOpenAiVision(apiKey: string, model = 'gpt-4.1-mini'): Visi
       const response = await client.responses.create({
         model,
         input: [
-          { role: 'system', content: SYSTEM },
+          { role: 'system', content: VISION_SYSTEM_PROMPT },
           {
             role: 'user',
             content: [{ type: 'input_text' as const, text: prompt }, ...images.map(imagePart)],

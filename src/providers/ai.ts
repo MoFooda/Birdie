@@ -20,6 +20,26 @@ import { SIGNAL_LABELS } from '@/core/audit-checks';
 // OpenAI
 // ---------------------------------------------------------------------------
 
+/**
+ * Asking for `json_object` carries a condition that is easy to miss: the request is
+ * rejected outright unless the word "JSON" appears somewhere in the input. Every prompt in
+ * this codebase describes the fields it wants without ever naming the format, so every
+ * live call failed with a 400 and each step reported "AI unavailable" — the same shape a
+ * missing key produces, which is what made it hard to spot.
+ *
+ * The condition belongs to the API contract, so it is satisfied here rather than by asking
+ * every call site to remember a magic word. Exported so a test can hold the guarantee.
+ */
+export function buildAiInput(request: Pick<AiRequest<unknown>, 'system' | 'user'>) {
+  return [
+    {
+      role: 'system' as const,
+      content: `${request.system}\n\nReply with a single JSON object and nothing else — no prose, no code fences.`,
+    },
+    { role: 'user' as const, content: request.user },
+  ];
+}
+
 export function createOpenAiProvider(apiKey: string, model = 'gpt-4.1-mini'): AiProvider {
   const client = new OpenAI({ apiKey });
 
@@ -31,10 +51,7 @@ export function createOpenAiProvider(apiKey: string, model = 'gpt-4.1-mini'): Ai
       try {
         const response = await client.responses.create({
           model,
-          input: [
-            { role: 'system', content: request.system },
-            { role: 'user', content: request.user },
-          ],
+          input: buildAiInput(request),
           text: { format: { type: 'json_object' } },
         });
 

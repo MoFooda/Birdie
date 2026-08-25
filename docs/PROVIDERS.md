@@ -115,6 +115,11 @@ outreach generation — plus the two visual operations below.
 A response that fails schema validation is **discarded**, not repaired — the step reports
 an error and the company is flagged for review.
 
+Both adapters request `json_object` output, which the API refuses unless the word "JSON"
+appears somewhere in the input. The adapters add that instruction themselves rather than
+relying on each prompt to remember it — the failure mode is a 400 on every call, reported
+as "AI unavailable", which looks exactly like a missing key.
+
 **Without it:** those steps report "not run". The technical audit, status classification
 and competitor analysis still work, so the report remains useful; affected companies are
 flagged for manual review and no outreach is generated.
