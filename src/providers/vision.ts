@@ -23,6 +23,7 @@ import {
   type VisualComparison,
 } from '@/core/visual-schemas';
 import type { ProviderMeta, ProviderResult } from './types';
+import { textFormat } from './ai';
 
 export interface VisualContext {
   company_name: string;
@@ -97,7 +98,7 @@ export function createOpenAiVision(apiKey: string, model = 'gpt-4.1-mini'): Visi
             content: [{ type: 'input_text' as const, text: prompt }, ...images.map(imagePart)],
           },
         ],
-        text: { format: { type: 'json_object' } },
+        text: { format: textFormat(schema, operation) },
       });
 
       let parsedJson: unknown;

@@ -1,10 +1,15 @@
 /**
  * Zod schemas for every structured AI output.
  *
- * The AI provider is asked for JSON matching these shapes and the response is parsed
- * here before it touches the rest of the system. A response that does not validate is
- * discarded and the step reports `needs_review` — a malformed model answer must never
- * become a business claim.
+ * These are not only the validator — they are also the contract sent to the model. The
+ * adapter converts each one into a structured-output format, so the field names and the
+ * enum values are enforced by the API rather than described in a prompt and hoped for.
+ * Anything that still fails validation is discarded and the step reports `needs_review`;
+ * a malformed model answer must never become a business claim.
+ *
+ * That conversion constrains what can be written here: strict mode allows no optional
+ * keys and no open-ended objects, so no `.optional()`, `.default()` or `.record()` in a
+ * schema the model fills. `tests/schemas.test.ts` fails if one appears.
  */
 
 import { z } from 'zod';
@@ -110,7 +115,12 @@ export const outreachMessageSchema = z.object({
   competitor_referenced: z.string().nullable(),
   cta: z.string().min(1),
   confidence: confidenceSchema,
-  editable_variables: z.record(z.string(), z.string()).default({}),
+  /**
+   * Pairs rather than a map: OpenAI's structured outputs reject an open-ended object,
+   * and being able to constrain the model to the exact shape is worth more here than the
+   * convenience of a record. `steps.ts` folds these back into one before storing them.
+   */
+  editable_variables: z.array(z.object({ name: z.string(), value: z.string() })),
 });
 export type OutreachMessageOutput = z.infer<typeof outreachMessageSchema>;
 
@@ -123,8 +133,7 @@ export const outreachFlowSchema = z.object({
         body: z.string().min(1),
       }),
     )
-    .max(3)
-    .default([]),
+    .max(3),
 });
 export type OutreachFlowOutput = z.infer<typeof outreachFlowSchema>;
 

@@ -115,10 +115,18 @@ outreach generation — plus the two visual operations below.
 A response that fails schema validation is **discarded**, not repaired — the step reports
 an error and the company is flagged for review.
 
-Both adapters request `json_object` output, which the API refuses unless the word "JSON"
-appears somewhere in the input. The adapters add that instruction themselves rather than
-relying on each prompt to remember it — the failure mode is a 400 on every call, reported
-as "AI unavailable", which looks exactly like a missing key.
+Each Zod schema is converted into a **structured-output format**, so the model is
+constrained to the exact fields and enum values rather than asked for them in prose. Before
+that, a sector call came back with `business_model: "Retail"` and three fields missing —
+valid JSON, wrong shape, discarded by the validator. Strict mode allows no optional keys
+and no open-ended objects; `tests/schemas.test.ts` fails if a schema stops converting, and
+a schema that genuinely cannot be expressed falls back to plain JSON rather than failing
+the call.
+
+The adapters also state the word "JSON" in the input, which the API requires for JSON
+output and no prompt in the codebase used to do. Both failure modes report as "AI
+unavailable" — indistinguishable from a missing key, which is what made them expensive to
+find.
 
 **Without it:** those steps report "not run". The technical audit, status classification
 and competitor analysis still work, so the report remains useful; affected companies are

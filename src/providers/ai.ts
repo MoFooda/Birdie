@@ -12,6 +12,8 @@
  */
 
 import OpenAI from 'openai';
+import { zodTextFormat } from 'openai/helpers/zod';
+import type { z } from 'zod';
 import { safeParseAi } from '@/core/schemas';
 import { timed, type AiProvider, type AiRequest, type ProviderResult } from './types';
 import { SIGNAL_LABELS } from '@/core/audit-checks';
@@ -30,6 +32,27 @@ import { SIGNAL_LABELS } from '@/core/audit-checks';
  * The condition belongs to the API contract, so it is satisfied here rather than by asking
  * every call site to remember a magic word. Exported so a test can hold the guarantee.
  */
+/**
+ * Constrain the model to the schema rather than describing it and hoping.
+ *
+ * `json_object` only guarantees the reply parses as JSON — it says nothing about shape.
+ * Asking for a sector classification that way produced `business_model: "Retail"` and
+ * three missing fields, which the validator then threw away: a paid call, a discarded
+ * answer and a step reporting "AI unavailable". Structured outputs make the wrong answer
+ * unrepresentable instead.
+ *
+ * Not every schema converts — strict mode rejects open-ended objects and optional keys —
+ * so a schema that cannot be expressed falls back to plain JSON rather than failing the
+ * call outright.
+ */
+export function textFormat<T>(schema: z.ZodType<T>, name: string) {
+  try {
+    return zodTextFormat(schema, name);
+  } catch {
+    return { type: 'json_object' as const };
+  }
+}
+
 export function buildAiInput(request: Pick<AiRequest<unknown>, 'system' | 'user'>) {
   return [
     {
@@ -52,7 +75,7 @@ export function createOpenAiProvider(apiKey: string, model = 'gpt-4.1-mini'): Ai
         const response = await client.responses.create({
           model,
           input: buildAiInput(request),
-          text: { format: { type: 'json_object' } },
+          text: { format: textFormat(request.schema, request.schemaName) },
         });
 
         const text = response.output_text ?? '';
@@ -397,7 +420,7 @@ ${ctx.preferred_cta}${L.sign(ctx)}`,
     competitor_referenced: null,
     cta: ctx.preferred_cta,
     confidence: (first ? 'high' : 'low') as 'high' | 'medium' | 'low',
-    editable_variables: { company_name: ctx.company_name, first_name: name ?? '' },
+    editable_variables: [{ name: 'company_name', value: ctx.company_name }, { name: 'first_name', value: name ?? '' }],
   };
 
   const competitorLine = ctx.competitor_pattern
@@ -423,7 +446,7 @@ ${ctx.preferred_cta}${L.sign(ctx)}`,
     competitor_referenced: ctx.competitor_name,
     cta: ctx.preferred_cta,
     confidence: (ctx.competitor_pattern ? 'medium' : 'low') as 'high' | 'medium' | 'low',
-    editable_variables: { company_name: ctx.company_name, competitor: ctx.competitor_name ?? '' },
+    editable_variables: [{ name: 'company_name', value: ctx.company_name }, { name: 'competitor', value: ctx.competitor_name ?? '' }],
   };
 
   const msg3 = {
@@ -443,7 +466,7 @@ ${ctx.preferred_cta}${L.sign(ctx)}`,
     competitor_referenced: null,
     cta: ctx.preferred_cta,
     confidence: 'medium' as const,
-    editable_variables: { company_name: ctx.company_name, service: ctx.agency_service },
+    editable_variables: [{ name: 'company_name', value: ctx.company_name }, { name: 'service', value: ctx.agency_service }],
   };
 
   const msg4 = {
@@ -465,7 +488,7 @@ Is there someone else at ${ctx.company_name} I should be speaking to about this 
     competitor_referenced: null,
     cta: ar ? 'رد بكلمة واحدة' : 'A one-line reply is enough',
     confidence: 'high' as const,
-    editable_variables: { company_name: ctx.company_name },
+    editable_variables: [{ name: 'company_name', value: ctx.company_name }],
   };
 
   const whatsapp_drafts = first

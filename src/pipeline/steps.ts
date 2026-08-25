@@ -1185,7 +1185,9 @@ async function generateOutreach(ctx: StepContext): Promise<StepResult> {
       competitor_referenced: m.competitor_referenced,
       cta: m.cta,
       confidence: m.confidence,
-      editable_variables: m.editable_variables ?? {},
+      // The model returns pairs so structured outputs can constrain them; storage keeps
+      // the map the rest of the app expects.
+      editable_variables: Object.fromEntries((m.editable_variables ?? []).map((v) => [v.name, v.value])),
       edited_by_human: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

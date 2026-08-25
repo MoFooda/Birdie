@@ -14,6 +14,9 @@ import {
   websiteAssessmentSchema,
   competitorValidationSchema,
 } from '@/core/schemas';
+import { visualAssessmentSchema, visualComparisonSchema } from '@/core/visual-schemas';
+import { zodTextFormat } from 'openai/helpers/zod';
+import type { z } from 'zod';
 
 const validSector = {
   sector: 'Healthcare',
@@ -110,29 +113,32 @@ describe('outreachFlowSchema', () => {
     competitor_referenced: null,
     cta: 'Worth a call?',
     confidence: 'high',
-    editable_variables: { company_name: 'Acme' },
+    editable_variables: [{ name: 'company_name', value: 'Acme' }],
   });
 
+  const flow = (messages: unknown[]) => ({ messages, whatsapp_drafts: [] });
+
   it('requires exactly four messages', () => {
-    expect(safeParseAi(outreachFlowSchema, { messages: [1, 2, 3, 4].map(message) }).ok).toBe(true);
-    expect(safeParseAi(outreachFlowSchema, { messages: [1, 2, 3].map(message) }).ok).toBe(false);
-    expect(safeParseAi(outreachFlowSchema, { messages: [1, 2, 3, 4, 1].map(message) }).ok).toBe(false);
+    expect(safeParseAi(outreachFlowSchema, flow([1, 2, 3, 4].map(message))).ok).toBe(true);
+    expect(safeParseAi(outreachFlowSchema, flow([1, 2, 3].map(message))).ok).toBe(false);
+    expect(safeParseAi(outreachFlowSchema, flow([1, 2, 3, 4, 1].map(message))).ok).toBe(false);
   });
 
   it('rejects a step number outside 1–4', () => {
-    expect(safeParseAi(outreachFlowSchema, { messages: [1, 2, 3, 9].map(message) }).ok).toBe(false);
+    expect(safeParseAi(outreachFlowSchema, flow([1, 2, 3, 9].map(message))).ok).toBe(false);
   });
 
   it('rejects an over-long subject line', () => {
     const messages = [1, 2, 3, 4].map(message);
     messages[0]!.subject = 'x'.repeat(200);
-    expect(safeParseAi(outreachFlowSchema, { messages }).ok).toBe(false);
+    expect(safeParseAi(outreachFlowSchema, flow(messages)).ok).toBe(false);
   });
 
-  it('defaults WhatsApp drafts to an empty list rather than failing', () => {
-    const result = safeParseAi(outreachFlowSchema, { messages: [1, 2, 3, 4].map(message) });
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data.whatsapp_drafts).toEqual([]);
+  it('requires the WhatsApp list to be stated, even when empty', () => {
+    // It used to default to []. Structured outputs make every field required anyway, and
+    // a model that simply forgot the key is a model whose other output is worth doubting.
+    expect(safeParseAi(outreachFlowSchema, flow([1, 2, 3, 4].map(message))).ok).toBe(true);
+    expect(safeParseAi(outreachFlowSchema, { messages: [1, 2, 3, 4].map(message) }).ok).toBe(false);
   });
 });
 
@@ -159,5 +165,30 @@ describe('safeParseAi', () => {
     const result = safeParseAi(sectorDetectionSchema, { ...validSector, confidence: 'nope' });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain('confidence');
+  });
+});
+
+/**
+ * Every schema the model is asked to fill must survive conversion to a structured-output
+ * format. When one does not, the adapter quietly falls back to plain JSON — and a free-text
+ * model answer against an enum field produced exactly what happened live: `business_model:
+ * "Retail"`, three fields missing, the whole response discarded, and the step reporting
+ * "AI unavailable" as though no key were configured.
+ *
+ * Strict mode rejects optional keys and open-ended objects, so this fails the moment a
+ * `.default()`, `.optional()` or `.record()` creeps into one of these.
+ */
+describe('structured outputs', () => {
+  const schemas: Array<[string, z.ZodType<unknown>]> = [
+    ['sector_detection', sectorDetectionSchema],
+    ['website_assessment', websiteAssessmentSchema],
+    ['competitor_validation', competitorValidationSchema],
+    ['outreach_flow', outreachFlowSchema],
+    ['visual_assessment', visualAssessmentSchema],
+    ['visual_comparison', visualComparisonSchema],
+  ];
+
+  it.each(schemas)('%s converts to a schema the model can be held to', (name, schema) => {
+    expect(() => zodTextFormat(schema, name)).not.toThrow();
   });
 });
