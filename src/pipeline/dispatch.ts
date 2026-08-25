@@ -11,6 +11,7 @@
  */
 
 import 'server-only';
+import { after } from 'next/server';
 import { env } from '@/lib/env';
 import { getStore } from '@/store';
 import { getProviders } from '@/providers/registry';
@@ -26,13 +27,33 @@ export function dispatchMode(): DispatchMode {
 /** Fire-and-forget promises, tracked so `waitForIdle` can await them in tests. */
 const inflight = new Set<Promise<unknown>>();
 
+/**
+ * Keep a batch alive after the response goes out.
+ *
+ * A bare detached promise is not enough on a serverless host: the platform is entitled to
+ * freeze the instance the moment the response is written, so the batch stops somewhere in
+ * the middle of a company with no error anywhere. Next's `after` hands the promise to the
+ * host's keep-alive instead, which is the supported way to finish work past the response.
+ *
+ * It only exists inside a request, so tests and the CLI fall back to the plain detached
+ * promise — those run in a long-lived process where nothing is going to freeze them.
+ *
+ * The host's function timeout still applies: `maxDuration` on the run route bounds how
+ * long this can keep going, which is why large batches still want Trigger.dev.
+ */
 function background(promise: Promise<unknown>): void {
   inflight.add(promise);
-  promise
+  const tracked = promise
     .catch(() => {
       /* per-company failures are already recorded in job_runs */
     })
     .finally(() => inflight.delete(promise));
+
+  try {
+    after(tracked);
+  } catch {
+    // Called outside a request scope — nothing to extend, and nothing to freeze either.
+  }
 }
 
 /** Test/CLI helper: resolve once all background pipeline work has finished. */
@@ -83,10 +104,10 @@ export async function dispatchCampaignRun(
     companyIds: targets.map((c) => c.id),
   });
 
-  // On a serverless host a detached promise can be frozen the moment the response is
-  // returned. With fixture providers a whole batch finishes in about a second, so demo
-  // runs are awaited — that makes a hosted demo deterministic instead of a coin flip.
-  // Live batches take minutes and must not block the request; those need Trigger.dev.
+  // Demo runs are awaited outright: with fixture providers a whole batch finishes in about
+  // a second, and awaiting makes a hosted demo deterministic instead of a coin flip. A live
+  // batch takes minutes and must not block the request, so it goes to `background`, which
+  // asks the host to keep the instance alive until it finishes.
   if (options.wait || env.demoMode) {
     await run;
   } else {

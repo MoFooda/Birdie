@@ -77,10 +77,16 @@ Builder returned invalid maxDuration value for Serverless Function
 between 1 and 300 for plan hobby.
 ```
 
-A large batch run with `wait: true` can exceed 300 seconds and be killed mid-run. Nothing
-is corrupted when that happens — every step is idempotent and recorded in `job_runs`, so
-re-running the batch resumes rather than duplicates. For batches that size, use
-Trigger.dev.
+A large batch can exceed 300 seconds and be killed mid-run. Nothing is corrupted when that
+happens — every step is idempotent and recorded in `job_runs`, so re-running the batch
+resumes rather than duplicates. For batches that size, use Trigger.dev.
+
+The in-process runner hands its batch to Next's `after`, so the work continues past the
+response instead of being frozen with it. That is a keep-alive, not durability: it buys the
+batch the rest of the function's `maxDuration` budget and nothing more. Roughly, a live
+company takes 1.5–3 minutes — dominated by the two PageSpeed calls — and
+`PIPELINE_CONCURRENCY` companies run at once, so about eight companies is what fits in 300
+seconds. Past that, Trigger.dev stops being optional.
 
 ### Important: use Trigger.dev in serverless
 
