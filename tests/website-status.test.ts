@@ -74,6 +74,63 @@ describe('classifyWebsiteStatus', () => {
     expect(result.status).toBe('bot_protection');
   });
 
+  // Regression: eleven working Shopify stores were classified bot_protection in a live
+  // batch, purely because reCAPTCHA ships with the contact form. The word is in the
+  // markup of a page that loaded perfectly, and matching it there stopped the analysis.
+  it('does not call a full page bot-protected because its markup mentions a captcha', () => {
+    const html =
+      '<html><body><nav>' +
+      Array.from({ length: 12 }, (_, i) => `<a href="/p${i}">Product ${i}</a>`).join('') +
+      '</nav><p>' +
+      'shop copy '.repeat(300) +
+      '</p><script src="https://www.google.com/recaptcha/api.js"></script>' +
+      '<form id="contact">protected by reCAPTCHA</form></body></html>';
+    const result = classifyWebsiteStatus(
+      probe({ html, textContent: 'shop copy '.repeat(300), title: 'Lernitoys.ae' }),
+    );
+    expect(result.status).toBe('live');
+  });
+
+  it('still calls a near-empty captcha page bot-protected', () => {
+    const result = classifyWebsiteStatus(
+      probe({
+        httpStatus: 403,
+        html: '<html><body><div id="captcha-box">Please solve the captcha</div></body></html>',
+        textContent: 'Please solve the captcha',
+        title: 'Access denied',
+      }),
+    );
+    expect(result.status).toBe('bot_protection');
+    expect(result.confidence).toBe('medium');
+  });
+
+  it('does not call a trading shop under construction over a "coming soon" product badge', () => {
+    const html =
+      '<html><body><nav>' +
+      Array.from({ length: 20 }, (_, i) => `<a href="/p${i}">Product ${i}</a>`).join('') +
+      '</nav><span class="badge">Coming soon</span><p>' +
+      'catalogue copy '.repeat(300) +
+      '</p></body></html>';
+    const result = classifyWebsiteStatus(
+      probe({ html, textContent: 'Coming soon ' + 'catalogue copy '.repeat(300) }),
+    );
+    expect(result.status).toBe('live');
+  });
+
+  it('does not read a link to jordan.com as a domain-for-sale listing', () => {
+    const result = classifyWebsiteStatus(
+      probe({
+        html:
+          '<html><body><nav><a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></nav>' +
+          '<p>' +
+          'partner copy '.repeat(300) +
+          '</p><a href="https://jordan.com">Our Jordan office</a></body></html>',
+        textContent: 'partner copy '.repeat(300) + ' Our Jordan office',
+      }),
+    );
+    expect(result.status).toBe('live');
+  });
+
   it.each([401, 403, 429, 451])('treats HTTP %i as access blocked rather than offline', (code) => {
     const result = classifyWebsiteStatus(probe({ httpStatus: code, html: '<html><body>Forbidden</body></html>', textContent: 'Forbidden' }));
     expect(result.status).toBe('access_blocked');
